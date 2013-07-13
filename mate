@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+# vim: set ts=8 sw=4 et cino=:0,t0,(0,u0,w1,m1:
+
+import optparse
+import os
+import shlex
+import signal
+import subprocess
+import sys
+
+#
+# Return back to the directory the script was launched from on SIGINT
+#
+
+start_directory = os.getcwd()
+
+def sigint_handler(signal, frame):
+    os.chdir(start_directory)
+    sys.exit(0)
+signal.signal(signal.SIGINT, sigint_handler)
+
+#
+# Coloured messages
+#
+
+verbose = False
+quiet = False
+print_colors = { 'debug': 37, 'info': 32, 'warn': 33, 'err': 31 }
+
+def _color_print(level, msg, stream = sys.stdout):
+    if os.getenv('ANSI_COLORS_DISABLED') is None:
+        color = print_colors[level]
+        level = '\033[%dm%s:\033[0m' % (color, level)
+    stream.write('%s %s\n' % (level, msg))
+
+def info(msg):
+    _color_print('info', msg)
+
+#
+# Helper to execute a command synchronously and get stdout/stderr
+#
+
+def execute(cmd):
+    args = shlex.split(cmd)
+    p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    out, err = p.communicate()
+    return out.decode('utf-8').strip(), p.returncode
+
+def execute_to_file(cmd, filename):
+    args = shlex.split(cmd)
+    f = open(filename, 'w+')
+    p = subprocess.Popen(args, stdout=f, stderr=subprocess.STDOUT)
+    ret = p.wait()
+    f.close()
+    return ret
+
+#
+# Exceptions
+#
+
+class Error(Exception):
+	def __init__(self, msg):
+		self.msg = msg
+
+class GitError(Error):
+	pass
+
+class BuildError(Error):
+	pass
+
+#
+# Represents the software project we want to gather metrics on
+#
+
+class Project:
+    def __init__(self, path):
+        self.path = path
+
+    def setup(self, rev='HEAD'):
+        os.chdir(self.path)
+        if not os.path.isdir('.git'):
+            raise GitError("%s is not a git repository" %
+                                    self.path)
+
+        self.git_sha, ret = execute('git rev-parse %s' % rev)
+        if ret:
+            raise GitError("Failed to parse revision '%s'" % rev)
+
+        self.short_git_sha, ret = execute('git rev-parse --short %s' % rev)
+        if ret:
+            raise GitError("Failed to retrieve short hash for '%s'" % rev)
+
+        artefacts_short_dir = os.path.join('.mate/artefacts/', self.git_sha[:2])
+        self.artefacts_dir = os.path.join(artefacts_short_dir, self.git_sha)
+
+        if not os.path.isfile('Makefile'):
+            raise BuildError("%s has no Makefile" % self.path)
+
+        for directory in ('.mate', '.mate/artefacts', artefacts_short_dir,
+                          self.artefacts_dir, ):
+            if not os.path.isdir(directory):
+                os.mkdir(directory)
+
+    def fini(self):
+        global start_directory
+        os.chdir(start_directory)
+
+    def _info(self, msg):
+        info('%s: %s' % (self.short_git_sha, msg))
+
+    def _artefact(self, name, command):
+        self._info("Generating artefact '%s'" % name)
+        f = os.path.join(self.artefacts_dir, name)
+        return execute_to_file(command, f)
+
+    def clean(self):
+        self._artefact('clean', 'make clean')
+
+    def build(self):
+        self._artefact('build', 'make')
+
+def parse_options(args):
+    usage = "Usage: mate [options] [path to project]"
+    parser = optparse.OptionParser(usage, version=1.0)
+
+    parser.add_option("-v", "--verbose", action="store_true",
+            dest="verbose", default=False,
+            help="be more verbose")
+
+    (options, args) = parser.parse_args()
+
+    return (options, args)
+
+if __name__ == '__main__':
+    (options, args) = parse_options(sys.argv[1:])
+    verbose = options.verbose
+
+    project_path = "."
+    if len(args):
+        project_path = args[0]
+
+    project = Project(project_path)
+
+    try:
+        project.setup()
+        project.clean()
+        project.build()
+    except Error as e:
+        print("Error: %s" % e.msg)
+        sys.exit(1)
+    finally:
+        project.fini()
