@@ -4,6 +4,7 @@
 import bisect
 import optparse
 import os
+import re
 import shlex
 import signal
 import subprocess
@@ -85,6 +86,9 @@ class NotFound(Error):
 	pass
 
 class GitError(Error):
+	pass
+
+class CollectError(Error):
 	pass
 
 class BuildError(Error):
@@ -186,6 +190,74 @@ class CommitDB:
         self.commits.insert(i, (commit.hash(), commit.timestamp()))
 
 #
+# An artefact is data collected from a git repository. For instance the output
+# (stdout) of a build is the artefact used by the CompilationWarningMetric
+#
+
+class Artefact:
+    def __init__(self, project, args=None):
+        self.project = project
+        self.commit = project.current_commit
+        self.artefact_dir = project.hash_dirs['artefacts']
+        self.args = args
+
+    def _info(self, msg):
+        info('%s: %s' % (self.commit.short_hash(), msg))
+
+    def _artefact(self, name, command):
+        self._info("Generating artefact '%s'" % name)
+        f = os.path.join(self.artefact_dir, name)
+        return execute_to_file(command, f)
+
+    def ensure_collect(self):
+        pass
+
+    def collect(self):
+        self.ensure_collect()
+        self.do_collect()
+
+class BuildArtefact(Artefact):
+    name = 'build'
+
+    def ensure_collect(self):
+        if not os.path.isfile('Makefile'):
+            raise CollectError("%s has no Makefile" % self.project.path)
+
+    def do_collect(self):
+        self._artefact('clean', 'make clean')
+        self._artefact('build', 'make')
+#
+# A metric is an object that collect data on an artefact
+#
+
+class Metric:
+    def __init__(self, project, args=None):
+        self.project = project
+        self.commit = project.current_commit
+        self.artefact_file = os.path.join(project.hash_dirs['artefacts'],
+                                          self.__class__.artefact)
+        self.args = args
+
+        self.value = 0
+
+    def _info(self, msg):
+        info('%s: %s' % (self.commit.short_hash(), msg))
+
+    def analyse(self):
+        self.do_analyse()
+
+class CompilationWarningMetric(Metric):
+    artefact = 'build'
+    name = 'compilation-warnings'
+
+    def do_analyse(self):
+        r = re.compile(':[0-9]+:[0-9]+: warning:')
+        with open(self.artefact_file, 'r') as f:
+            for line in f:
+                if r.search(line):
+                    self.value += 1
+
+#
 # Represents the software project we want to gather metrics on
 #
 
@@ -194,6 +266,15 @@ class Project:
         self.path = path
         self.db = CommitDB(path)
         self.db.load()
+        self.hash_dirs = {}
+
+    def setup_hash_dir(self, name):
+        git_sha = self.current_commit.hash()
+        hash_dir = os.path.join('.mate', name)
+        short_dir = os.path.join(hash_dir, git_sha[:2])
+        long_dir = os.path.join(short_dir, git_sha[2:])
+        self.hash_dirs[name] = long_dir
+        ensure_directories((hash_dir, short_dir, long_dir))
 
     def setup(self, rev='HEAD'):
         try:
@@ -205,18 +286,11 @@ class Project:
             raise GitError("%s is not a git repository" % self.path)
 
         self.start_commit = GitCommit(self.path, 'HEAD')
-
         self.current_commit = GitCommit(self.path, rev)
-        git_sha = self.current_commit.hash()
 
-        artefacts_short_dir = os.path.join('.mate/artefacts/', git_sha[:2])
-        self.artefacts_dir = os.path.join(artefacts_short_dir, git_sha)
-
-        if not os.path.isfile('Makefile'):
-            raise BuildError("%s has no Makefile" % self.path)
-
-        ensure_directories(('.mate', '.mate/artefacts', artefacts_short_dir,
-                           self.artefacts_dir, ))
+        ensure_directories(('.mate', ))
+        self.setup_hash_dir('artefacts')
+        self.setup_hash_dir('metrics')
 
         # checkout the commit we want to inspect
         self.current_commit.checkout()
@@ -233,30 +307,25 @@ class Project:
     def _info(self, msg):
         info('%s: %s' % (self.current_commit.short_hash(), msg))
 
-    def _artefact(self, name, command):
-        self._info("Generating artefact '%s'" % name)
-        f = os.path.join(self.artefacts_dir, name)
-        return execute_to_file(command, f)
-
-    def clean(self):
-        self._artefact('clean', 'make clean')
-
-    def build(self):
-        self._artefact('build', 'make')
-
     def _done(self):
         self.db.insert_commit(self.current_commit)
         self.db.save()
 
-    def build_artefacts(self):
+    def collect_artefacts(self):
         known, index = self.db.is_known_commit(self.current_commit)
         if known:
             self._debug('Artefacts already generated')
             return
 
-        self.clean()
-        self.build()
+        build = BuildArtefact(self)
+        build.collect()
+
         self._done()
+
+    def collect_metrics(self):
+        warnings = CompilationWarningMetric(self)
+        warnings.analyse()
+        self._info('%d warnings' % warnings.value)
 
 usage = """Usage: mate [options] command"
 
@@ -303,7 +372,8 @@ class Mate:
 
         try:
             project.setup(rev)
-            project.build_artefacts()
+            project.collect_artefacts()
+            project.collect_metrics()
         except Error as e:
             print("Error: %s" % e.msg)
             sys.exit(1)
