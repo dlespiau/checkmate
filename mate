@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # vim: set ts=8 sw=4 et cino=:0,t0,(0,u0,w1,m1:
 
+import bisect
 import optparse
 import os
 import shlex
@@ -25,7 +26,7 @@ signal.signal(signal.SIGINT, sigint_handler)
 
 verbose = False
 quiet = False
-print_colors = { 'debug': 37, 'info': 32, 'warn': 33, 'err': 31 }
+print_colors = { 'debug': 37, 'info': 32, 'warn': 33, 'error': 31 }
 
 def _color_print(level, msg, stream = sys.stdout):
     if os.getenv('ANSI_COLORS_DISABLED') is None:
@@ -33,8 +34,17 @@ def _color_print(level, msg, stream = sys.stdout):
         level = '\033[%dm%s:\033[0m' % (color, level)
     stream.write('%s %s\n' % (level, msg))
 
+def debug(msg):
+    _color_print('debug', msg)
+
 def info(msg):
     _color_print('info', msg)
+
+def warn(msg):
+    _color_print('warn', msg)
+
+def error(msg):
+    _color_print('error', msg)
 
 #
 # Helper to execute a command synchronously and get stdout/stderr
@@ -55,12 +65,24 @@ def execute_to_file(cmd, filename):
     return ret
 
 #
+# Various helpers
+#
+
+def ensure_directories(dirs):
+    for d in dirs:
+        if not os.path.isdir(d):
+            os.mkdir(d)
+
+#
 # Exceptions
 #
 
 class Error(Exception):
 	def __init__(self, msg):
 		self.msg = msg
+
+class NotFound(Error):
+	pass
 
 class GitError(Error):
 	pass
@@ -69,44 +91,147 @@ class BuildError(Error):
 	pass
 
 #
+# Represents a git commit
+#
+
+class GitCommit:
+    def __init__(self, path, rev):
+        self.base_path = path
+        self.rev = rev
+        self._short_hash = None
+        self._timestamp = None
+
+        self._hash, ret = execute('git rev-parse %s' % self.rev)
+        if ret:
+            raise GitError("Failed to parse revision '%s'" % self.rev)
+
+        self._short_hash, ret = execute('git rev-parse --short %s' % self.rev)
+
+        # only store abbrev if it exists and we're not in a detached state
+        self._abbrev = None
+        abbrev, ret = execute('git rev-parse --abbrev-ref %s' % self.rev)
+        if abbrev and abbrev != 'HEAD':
+            self._abbrev = abbrev
+
+    def hash(self):
+        return self._hash
+
+    def short_hash(self):
+        return self._short_hash
+
+    def timestamp(self):
+        if self._timestamp:
+            return self._timestamp
+
+        self._timestamp, ret = execute('git show -s --format=%%ct %s' %
+                                       self._hash)
+        if ret:
+            raise GitError("Failed to get the commit timestamp of '%s'" %
+                           self._hash)
+
+        return self._timestamp
+
+    def checkout(self):
+        if self._abbrev:
+            execute('git checkout %s' % self._abbrev)
+        else:
+            execute('git checkout %s' % self.hash())
+
+#
+# The on-disk database with all the already treated commits. This is just a
+# file with one commit per line, ordered by commit date. Each line is:
+#   hash;timestamp
+#
+
+class CommitDB:
+    def __init__(self, path):
+        self.base_path = path
+        self.db_path = os.path.join(path, '.mate', 'db')
+        ensure_directories(('.mate', ))
+
+    def load(self):
+        self.commits = []
+        self.keys = []
+        if not os.path.exists(self.db_path):
+            return
+
+        with open(self.db_path, 'r+') as f:
+            for line in f:
+                fields = line.split(':')
+                fields[-1] = fields[-1].strip()
+                self.commits.append(fields)
+
+        # precompute the list of keys for bisect
+        self.keys = [c[1] for c in self.commits]
+
+    def save(self):
+        with open(self.db_path + '~', 'w+') as f:
+            for commit in self.commits:
+                f.write("%s:%s\n" % (commit[0], commit[1]))
+        os.rename(self.db_path + '~', self.db_path)
+
+    def is_known_commit(self, commit):
+        i = bisect.bisect_left(self.keys, commit.timestamp())
+
+        while i < len(self.keys) and self.commits[i][1] == commit.timestamp():
+            if self.commits[i][0] == commit.hash():
+                return True, i
+            i += 1
+
+        return False, -1
+
+    def insert_commit(self, commit):
+        i = bisect.bisect_left(self.keys, commit.timestamp())
+        self.keys.insert(i, commit.timestamp())
+        self.commits.insert(i, (commit.hash(), commit.timestamp()))
+
+#
 # Represents the software project we want to gather metrics on
 #
 
 class Project:
     def __init__(self, path):
         self.path = path
+        self.db = CommitDB(path)
+        self.db.load()
 
     def setup(self, rev='HEAD'):
-        os.chdir(self.path)
+        try:
+            os.chdir(self.path)
+        except FileNotFoundError:
+            raise NotFound("%s not a directory" % self.path)
+
         if not os.path.isdir('.git'):
-            raise GitError("%s is not a git repository" %
-                                    self.path)
+            raise GitError("%s is not a git repository" % self.path)
 
-        self.git_sha, ret = execute('git rev-parse %s' % rev)
-        if ret:
-            raise GitError("Failed to parse revision '%s'" % rev)
+        self.start_commit = GitCommit(self.path, 'HEAD')
 
-        self.short_git_sha, ret = execute('git rev-parse --short %s' % rev)
-        if ret:
-            raise GitError("Failed to retrieve short hash for '%s'" % rev)
+        self.current_commit = GitCommit(self.path, rev)
+        git_sha = self.current_commit.hash()
 
-        artefacts_short_dir = os.path.join('.mate/artefacts/', self.git_sha[:2])
-        self.artefacts_dir = os.path.join(artefacts_short_dir, self.git_sha)
+        artefacts_short_dir = os.path.join('.mate/artefacts/', git_sha[:2])
+        self.artefacts_dir = os.path.join(artefacts_short_dir, git_sha)
 
         if not os.path.isfile('Makefile'):
             raise BuildError("%s has no Makefile" % self.path)
 
-        for directory in ('.mate', '.mate/artefacts', artefacts_short_dir,
-                          self.artefacts_dir, ):
-            if not os.path.isdir(directory):
-                os.mkdir(directory)
+        ensure_directories(('.mate', '.mate/artefacts', artefacts_short_dir,
+                           self.artefacts_dir, ))
+
+        # checkout the commit we want to inspect
+        self.current_commit.checkout()
 
     def fini(self):
         global start_directory
+
+        self.start_commit.checkout()
         os.chdir(start_directory)
 
+    def _debug(self, msg):
+        debug('%s: %s' % (self.current_commit.short_hash(), msg))
+
     def _info(self, msg):
-        info('%s: %s' % (self.short_git_sha, msg))
+        info('%s: %s' % (self.current_commit.short_hash(), msg))
 
     def _artefact(self, name, command):
         self._info("Generating artefact '%s'" % name)
@@ -119,34 +244,87 @@ class Project:
     def build(self):
         self._artefact('build', 'make')
 
+    def _done(self):
+        self.db.insert_commit(self.current_commit)
+        self.db.save()
+
+    def build_artefacts(self):
+        known, index = self.db.is_known_commit(self.current_commit)
+        if known:
+            self._debug('Artefacts already generated')
+            return
+
+        self.clean()
+        self.build()
+        self._done()
+
+usage = """Usage: mate [options] command"
+
+List of commands:
+    help                        display this help
+    analyse [commit]            analyse commit (default to HEAD)"""
+
+parser = optparse.OptionParser(usage, version=1.0)
+
 def parse_options(args):
-    usage = "Usage: mate [options] [path to project]"
-    parser = optparse.OptionParser(usage, version=1.0)
+    global parser
 
     parser.add_option("-v", "--verbose", action="store_true",
             dest="verbose", default=False,
             help="be more verbose")
 
+    parser.add_option("-C", "", action="store_true", dest="directory",
+            default='.', help="change to directory")
+
     (options, args) = parser.parse_args()
 
     return (options, args)
+
+def usage():
+    parser.print_help()
+    sys.exit(1)
+
+class Mate:
+    def __init__(self):
+        self.commands = ('help', 'analyse', )
+
+    def is_known_command(self, cmd):
+        return cmd in self.commands
+
+    def help(self, args):
+        usage()
+
+    def analyse(self, args):
+        rev = 'HEAD'
+        if len(args) > 0:
+            rev = args[0]
+
+        project = Project(options.directory)
+
+        try:
+            project.setup(rev)
+            project.build_artefacts()
+        except Error as e:
+            print("Error: %s" % e.msg)
+            sys.exit(1)
+        finally:
+            project.fini()
+
+    def dispatch(self, cmd, args):
+        if not mate.is_known_command(cmd):
+            error("Unknown command '%s'" % cmd)
+            sys.exit(1)
+
+        method = getattr(self, cmd)
+        method(args)
+
 
 if __name__ == '__main__':
     (options, args) = parse_options(sys.argv[1:])
     verbose = options.verbose
 
-    project_path = "."
-    if len(args):
-        project_path = args[0]
+    if len(args) == 0:
+        usage()
 
-    project = Project(project_path)
-
-    try:
-        project.setup()
-        project.clean()
-        project.build()
-    except Error as e:
-        print("Error: %s" % e.msg)
-        sys.exit(1)
-    finally:
-        project.fini()
+    mate = Mate()
+    mate.dispatch(args[0], args[1:])
