@@ -57,13 +57,27 @@ def execute(cmd):
     out, err = p.communicate()
     return out.decode('utf-8').strip(), p.returncode
 
-def execute_to_file(cmd, filename):
+def execute_to_file(cmd, filename, shell=False, append=False, env=None):
     args = shlex.split(cmd)
-    f = open(filename, 'w+')
-    p = subprocess.Popen(args, stdout=f, stderr=subprocess.STDOUT)
+
+    if append:
+        f = open(filename, 'a+')
+    else:
+        f = open(filename, 'w+')
+
+    new_env = os.environ.copy()
+    if env:
+        new_env.update(env)
+
+    p = subprocess.Popen(args, stdout=f, stderr=subprocess.STDOUT, shell=shell,
+                         env=new_env)
     ret = p.wait()
     f.close()
     return ret
+
+def able_to_run(cmd):
+    out, ret = execute(cmd)
+    return ret == 0
 
 #
 # Various helpers
@@ -74,6 +88,22 @@ def ensure_directories(dirs):
         if not os.path.isdir(d):
             os.mkdir(d)
 
+def exec_file(filename, global_vars, local_vars=None):
+    with open(filename) as f:
+        code = compile(f.read(), filename, 'exec')
+        if not local_vars:
+            local_vars = global_vars
+        exec(code, global_vars, local_vars)
+
+def normalize_path(path):
+    return re.sub('[/]', '_', path)
+
+def enum(*sequential, **named):
+    enums = dict(zip(sequential, range(len(sequential))), **named)
+    reverse = dict((value, key) for key, value in enums.items())
+    enums['to_enum'] = reverse
+    return type('Enum', (), enums)
+
 #
 # Exceptions
 #
@@ -82,17 +112,23 @@ class Error(Exception):
 	def __init__(self, msg):
 		self.msg = msg
 
+class ConfigError(Exception):
+    pass
+
 class NotFound(Error):
-	pass
+    pass
 
 class GitError(Error):
-	pass
+    pass
 
 class CollectError(Error):
-	pass
+    pass
+
+class AnalyseError(Error):
+    pass
 
 class BuildError(Error):
-	pass
+    pass
 
 #
 # Represents a git commit
@@ -147,6 +183,8 @@ class GitCommit:
 #   hash;timestamp
 #
 
+DB = enum('HASH', 'COMMIT_TS')
+
 class CommitDB:
     def __init__(self, path):
         self.base_path = path
@@ -171,7 +209,7 @@ class CommitDB:
     def save(self):
         with open(self.db_path + '~', 'w+') as f:
             for commit in self.commits:
-                f.write("%s:%s\n" % (commit[0], commit[1]))
+                f.write("%s:%s\n" % (commit[DB.HASH], commit[DB.COMMIT_TS]))
         os.rename(self.db_path + '~', self.db_path)
 
     def is_known_commit(self, commit):
@@ -195,44 +233,130 @@ class CommitDB:
 #
 
 class Artefact:
+    need_file = False
+
     def __init__(self, project, args=None):
         self.project = project
+        self.config = project.config
         self.commit = project.current_commit
         self.artefact_dir = project.hash_dirs['artefacts']
         self.args = args
 
-    def _info(self, msg):
-        info('%s: %s' % (self.commit.short_hash(), msg))
+        self._has_metadata = False
 
-    def _artefact(self, name, command):
-        self._info("Generating artefact '%s'" % name)
-        f = os.path.join(self.artefact_dir, name)
-        return execute_to_file(command, f)
+    def _name(self, override=None):
+        if override:
+            return override
+        return self.__class__.name
+
+    def _info(self, msg):
+        info('%s: %s: %s' % (self.commit.short_hash(), self._name(), msg))
+
+    def _config(self, var):
+        try:
+            val = self.config.get_artefact(self._name())[var]
+        except (KeyError, TypeError):
+            val = None
+        return val
+
+    def _artefact_file(self, name=None, file_path=None):
+        if not name:
+            name = self._name()
+
+        if file_path:
+            return os.path.join(self.artefact_dir, name + '-' +
+                                normalize_path(file_path))
+        else:
+            return os.path.join(self.artefact_dir, name)
+
+    def _can_skip(self, name=None, file_path=None):
+        f = self._artefact_file(name, file_path)
+        return os.path.exists(f)
+
+    def _artefact(self, command, name=None, file_path=None, shell=False):
+        f = self._artefact_file(name, file_path)
+        if self._can_skip(name, file_path):
+            self._info("Artefact '%s' already generated, skipping..." %
+                       self._name(name))
+            return 0
+        else:
+            self._info("Generating artefact '%s'" % self._name(name))
+
+        env_vars = self._config('env')
+        return execute_to_file(command, f,
+                               shell=shell,
+                               append=self._has_metadata,
+                               env=env_vars)
+
+    # FIXME, a few problems with that still... don't use
+    def _metadata(self, key, val, name=None, file_path=None):
+        if self._can_skip(name, file_path):
+            return
+
+        self._has_metadata = True
+        f = self._artefact_file(name, file_path)
+        with open(f, 'w+') as f:
+            f.write("MATE_METADATA:%s:%s\n" % (key, val))
 
     def ensure_collect(self):
-        pass
+        self.do_ensure_collect()
 
-    def collect(self):
-        self.ensure_collect()
-        self.do_collect()
+    # @files is there for artefacts that act on files (eg. 'memcheck' needs a
+    # program to run). It can be None.
+    def collect(self, files):
+        if self.__class__.need_file and not files:
+            raise CollectError("The '%s' artefact needs files to operate on" %
+                               self._name())
+
+        if files:
+            for f in files:
+                self.ensure_collect()
+                self.do_collect(f)
+        else:
+                self.ensure_collect()
+                self.do_collect()
 
 class BuildArtefact(Artefact):
     name = 'build'
 
-    def ensure_collect(self):
+    def do_ensure_collect(self):
         if not os.path.isfile('Makefile'):
             raise CollectError("%s has no Makefile" % self.project.path)
 
-    def do_collect(self):
-        self._artefact('clean', 'make clean')
-        self._artefact('build', 'make')
+    def do_collect(self, file=None):
+        self._artefact('make clean', name='clean')
+        self._artefact('make')
+
+invoke_vg_libtool = './libtool --mode=execute valgrind --tool=memcheck \
+--leak-check=full --leak-resolution=high --num-callers=20 --track-origins=yes \
+%s'
+
+class MemcheckArtefact(Artefact):
+    name = 'memcheck'
+    need_file = True
+
+    def do_ensure_collect(self):
+        if not able_to_run('valgrind --version'):
+            raise CollectError("memcheck: valgrind is not installed")
+        if not self.project.is_using_libtool():
+            raise CollectError("memcheck: FIXME: not implemented")
+
+    def do_collect(self, file=None):
+        #self._metadata('filename', file, file_path=file)
+        self._artefact(invoke_vg_libtool % file, file_path=file)
+
+known_artefacts = (
+        BuildArtefact,
+        MemcheckArtefact,
+)
+
 #
 # A metric is an object that collect data on an artefact
 #
 
 class Metric:
     def __init__(self, project, args=None):
-        self.project = project
+        self.config = project.config
         self.commit = project.current_commit
         self.artefact_file = os.path.join(project.hash_dirs['artefacts'],
                                           self.__class__.artefact)
@@ -240,15 +364,27 @@ class Metric:
 
         self.value = 0
 
+    def _name(self, override=None):
+        if override:
+            return override
+        return self.__class__.name
+
     def _info(self, msg):
-        info('%s: %s' % (self.commit.short_hash(), msg))
+        info('%s: %s: %s' % (self.commit.short_hash(), self._name(), msg))
+
+    def get_config_var(self, var):
+        try:
+            val = self.config.get_metric(self._name())[var]
+        except (KeyError, TypeError):
+            val = None
+        return val
 
     def analyse(self):
         self.do_analyse()
 
 class CompilationWarningMetric(Metric):
-    artefact = 'build'
     name = 'compilation-warnings'
+    artefact = 'build'
 
     def do_analyse(self):
         r = re.compile(':[0-9]+:[0-9]+: warning:')
@@ -256,6 +392,74 @@ class CompilationWarningMetric(Metric):
             for line in f:
                 if r.search(line):
                     self.value += 1
+
+class MemcheckErrorMetric(Metric):
+    name = 'memcheck-errors'
+    description = "Number of errors reported by valgrind's memcheck tool"
+    artefact = 'memcheck'
+
+    def do_analyse(self):
+        r = re.compile('ERROR SUMMARY: ([0-9]+) errors')
+        with open(self.artefact_file, 'r') as f:
+            for line in f:
+                match = r.search(line)
+                if match:
+                    self.value = match.group(0)
+                    return
+
+        raise AnalyseError('memcheck: could not find the error summary')
+
+known_metrics = (
+        CompilationWarningMetric,
+        MemcheckErrorMetric,
+)
+
+#
+# Config file support
+#
+
+class Config:
+    defaults = {
+            'metrics': [ { 'name': 'compilation-warnings' }, ]
+    }
+
+    file = {}
+
+    def __init__(self, filename):
+        try:
+            exec_file(filename, Config.file)
+            debug("Loading config file: %s" % filename)
+        except IOError:
+            debug("No config file found (%s)" % filename)
+        except Exception as detail:
+            raise ConfigError(detail)
+
+    def __getattr__(self, name):
+        # metrics is a bit special, we append the one configured to the default
+        # ones
+        if name == 'metrics':
+            if 'metrics' in Config.file:
+                return Config.defaults['metrics'] + Config.file['metrics']
+            else:
+                return Config.defaults['metrics']
+        elif name in Config.file:
+            return Config.file[name]
+        elif name in Config.defaults:
+            return Config.defaults[name]
+
+        raise AttributeError("%r object has no attribute %r" %
+                                         (type(self).__name__, name))
+
+    def get_metric(self, name):
+        for m in self.metrics:
+            if m['name'] == name:
+                return m
+        return None
+
+    def get_artefact(self, name):
+        if self.artefacts and name in self.artefacts:
+            return self.artefacts[name]
+        return None
 
 #
 # Represents the software project we want to gather metrics on
@@ -281,6 +485,8 @@ class Project:
             os.chdir(self.path)
         except FileNotFoundError:
             raise NotFound("%s not a directory" % self.path)
+
+        self.config = Config('.mateconfig')
 
         if not os.path.isdir('.git'):
             raise GitError("%s is not a git repository" % self.path)
@@ -311,14 +517,35 @@ class Project:
         self.db.insert_commit(self.current_commit)
         self.db.save()
 
-    def collect_artefacts(self):
-        known, index = self.db.is_known_commit(self.current_commit)
-        if known:
-            self._debug('Artefacts already generated')
-            return
+    def is_using_libtool(self):
+        return os.path.exists('libtool')
 
-        build = BuildArtefact(self)
-        build.collect()
+    def _find_metric(self, name):
+        for cls in known_metrics:
+            if cls.name == name:
+                return cls(self)
+        raise ConfigError("'%s' is not a valid metric name")
+
+    def _find_artefact(self, metric):
+        for cls in known_artefacts:
+            if cls.name == metric.artefact:
+                return cls(self)
+        raise CollectError("'%s' has no associated artefact")
+
+    def collect_artefacts(self):
+        for conf in self.config.metrics:
+            try:
+                metric = self._find_metric(conf['name'])
+            except KeyError:
+                raise ConfigError("Configuration file has an unnamed metric")
+
+            artefact = self._find_artefact(metric)
+
+            self._info("Collecting artefact '%s' for metric '%s'" %
+                       (artefact.name, metric.name))
+
+            files = metric.get_config_var('files')
+            artefact.collect(files)
 
         self._done()
 
@@ -375,7 +602,7 @@ class Mate:
             project.collect_artefacts()
             project.collect_metrics()
         except Error as e:
-            print("Error: %s" % e.msg)
+            error(e.msg)
             sys.exit(1)
         finally:
             project.fini()
