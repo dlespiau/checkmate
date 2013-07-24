@@ -245,9 +245,7 @@ class Artefact:
 
         self._has_metadata = False
 
-    def _name(self, override=None):
-        if override:
-            return override
+    def _name(self):
         return self.__class__.name
 
     def _info(self, msg):
@@ -260,32 +258,35 @@ class Artefact:
             val = None
         return val
 
-    def _artefact_file(self, name=None, file_path=None):
-        if not name:
-            name = self._name()
-
+    def _artefact_file(self, file_path=None):
         if file_path:
-            return os.path.join(self.artefact_dir, name + '-' +
+            return os.path.join(self.artefact_dir, self._name() + '-' +
                                 normalize_path(file_path))
         else:
-            return os.path.join(self.artefact_dir, name)
+            return os.path.join(self.artefact_dir, self._name())
 
     def _do(self, command, shell=False):
         out, ret = execute(command, shell=shell)
         return ret == 0
 
-    def _can_skip(self, name=None, file_path=None):
-        f = self._artefact_file(name, file_path)
+    def _can_skip(self, file_path=None):
+        f = self._artefact_file(file_path)
         return os.path.exists(f)
 
-    def _artefact(self, command, name=None, file_path=None, shell=False):
-        f = self._artefact_file(name, file_path)
-        if self._can_skip(name, file_path):
-            self._info("Artefact '%s' already generated, skipping..." %
-                       self._name(name))
+    def _artefact(self, command, file_path=None, shell=False):
+        f = self._artefact_file(file_path)
+
+        if file_path:
+            file_str = " for file " + file_path
+        else:
+            file_str = ''
+
+        if self._can_skip(file_path):
+            self._info("Artefact '%s'%s already generated, skipping..." %
+                       (self._name(), file_str))
             return 0
         else:
-            self._info("Generating artefact '%s'" % self._name(name))
+            self._info("Generating artefact '%s'%s" % (self._name(), file_str))
 
         env_vars = self._config('env')
         return execute_to_file(command, f,
