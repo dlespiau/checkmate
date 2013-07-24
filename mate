@@ -258,7 +258,7 @@ class Artefact:
             val = None
         return val
 
-    def _artefact_file(self, file_path=None):
+    def log_file(self, file_path=None):
         if file_path:
             return os.path.join(self.artefact_dir, self._name() + '-' +
                                 normalize_path(file_path))
@@ -270,11 +270,11 @@ class Artefact:
         return ret == 0
 
     def _can_skip(self, file_path=None):
-        f = self._artefact_file(file_path)
+        f = self.log_file(file_path)
         return os.path.exists(f)
 
     def _artefact(self, command, file_path=None, shell=False):
-        f = self._artefact_file(file_path)
+        f = self.log_file(file_path)
 
         if file_path:
             file_str = " for file " + file_path
@@ -296,11 +296,11 @@ class Artefact:
 
     # FIXME, a few problems with that still... don't use
     def _metadata(self, key, val, name=None, file_path=None):
-        if self._can_skip(name, file_path):
+        if self._can_skip(file_path):
             return
 
         self._has_metadata = True
-        f = self._artefact_file(name, file_path)
+        f = self.log_file(file_path)
         with open(f, 'w+') as f:
             f.write("MATE_METADATA:%s:%s\n" % (key, val))
 
@@ -364,8 +364,6 @@ class Metric:
     def __init__(self, project, args=None):
         self.config = project.config
         self.commit = project.current_commit
-        self.artefact_file = os.path.join(project.hash_dirs['artefacts'],
-                                          self.__class__.artefact)
         self.args = args
 
         self.value = 0
@@ -385,35 +383,49 @@ class Metric:
             val = None
         return val
 
-    def analyse(self):
-        self.do_analyse()
+    def analyse(self, artefact, files):
+        if files:
+            for f in files:
+                self.do_analyse(artefact, f)
+        else:
+                self.do_analyse(artefact)
+
+    def output(self):
+        self.do_output()
+
 
 class CompilationWarningMetric(Metric):
     name = 'compilation-warnings'
     artefact = 'build'
 
-    def do_analyse(self):
+    def do_analyse(self, artefact, file=None):
         r = re.compile(':[0-9]+:[0-9]+: warning:')
-        with open(self.artefact_file, 'r') as f:
+        with open(artefact.log_file(), 'r') as f:
             for line in f:
                 if r.search(line):
                     self.value += 1
+
+    def do_output(self):
+        self._info('%d warnings' % self.value)
 
 class MemcheckErrorMetric(Metric):
     name = 'memcheck-errors'
     description = "Number of errors reported by valgrind's memcheck tool"
     artefact = 'memcheck'
 
-    def do_analyse(self):
+    def do_analyse(self,  artefact, file_path):
         r = re.compile('ERROR SUMMARY: ([0-9]+) errors')
-        with open(self.artefact_file, 'r') as f:
+        with open(artefact.log_file(file_path), 'r') as f:
             for line in f:
                 match = r.search(line)
                 if match:
-                    self.value = match.group(0)
+                    self.value = int(match.group(1))
                     return
 
         raise AnalyseError('memcheck: could not find the error summary')
+
+    def do_output(self):
+        self._info('%d errors' % self.value)
 
 known_metrics = (
         CompilationWarningMetric,
@@ -555,15 +567,26 @@ class Project:
 
         self._done()
 
-    def collect_metrics(self):
-        warnings = CompilationWarningMetric(self)
-        warnings.analyse()
-        self._info('%d warnings' % warnings.value)
+    def analyse(self):
+        # start by making sure we have the necessary artefacts
+        self.collect_artefacts()
+
+        for conf in self.config.metrics:
+            try:
+                metric = self._find_metric(conf['name'])
+            except KeyError:
+                raise ConfigError("Configuration file has an unnamed metric")
+
+            artefact = self._find_artefact(metric)
+            files = metric.get_config_var('files')
+            metric.analyse(artefact, files)
+            metric.output()
 
 usage = """Usage: mate [options] command"
 
 List of commands:
     help                        display this help
+    collect [commit]            collect artefacts for commit (default to HEAD)
     analyse [commit]            analyse commit (default to HEAD)"""
 
 parser = optparse.OptionParser(usage, version=1.0)
@@ -588,7 +611,7 @@ def usage():
 
 class Mate:
     def __init__(self):
-        self.commands = ('help', 'analyse', )
+        self.commands = ('help', 'collect', 'analyse', )
 
     def is_known_command(self, cmd):
         return cmd in self.commands
@@ -596,7 +619,7 @@ class Mate:
     def help(self, args):
         usage()
 
-    def analyse(self, args):
+    def _project_do(self, method, args):
         rev = 'HEAD'
         if len(args) > 0:
             rev = args[0]
@@ -605,13 +628,18 @@ class Mate:
 
         try:
             project.setup(rev)
-            project.collect_artefacts()
-            project.collect_metrics()
+            getattr(project, method)()
         except Error as e:
             error(e.msg)
             sys.exit(1)
         finally:
             project.fini()
+
+    def collect(self, args):
+        self._project_do('collect_artefacts', args)
+
+    def analyse(self, args):
+        self._project_do('analyse', args)
 
     def dispatch(self, cmd, args):
         if not mate.is_known_command(cmd):
