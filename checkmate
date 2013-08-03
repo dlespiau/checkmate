@@ -533,6 +533,10 @@ class Project:
         info('%s: %s' % (self.current_commit.short_hash(), msg))
 
     def _done(self):
+        (found, index) = self.db.is_known_commit(self.current_commit)
+        if found:
+            return
+
         self.db.insert_commit(self.current_commit)
         self.db.save()
 
