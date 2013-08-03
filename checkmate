@@ -611,10 +611,11 @@ def usage():
 
 class Mate:
     def __init__(self):
-        self.commands = ('help', 'collect', 'analyse', )
+        pass
 
-    def is_known_command(self, cmd):
-        return cmd in self.commands
+    def _is_known_command(self, cmd):
+        fn = getattr(self, cmd)
+        return fn and fn not in ('dispatch', )
 
     def help(self, args):
         usage()
@@ -642,7 +643,7 @@ class Mate:
         self._project_do('analyse', args)
 
     def dispatch(self, cmd, args):
-        if not mate.is_known_command(cmd):
+        if not mate._is_known_command(cmd):
             error("Unknown command '%s'" % cmd)
             sys.exit(1)
 
