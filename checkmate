@@ -216,8 +216,9 @@ class CommitDB:
     def is_known_commit(self, commit):
         i = bisect.bisect_left(self.keys, commit.timestamp())
 
-        while i < len(self.keys) and self.commits[i][1] == commit.timestamp():
-            if self.commits[i][0] == commit.hash():
+        while i < len(self.keys) and \
+                self.commits[i][DB.COMMIT_TS] == commit.timestamp():
+            if self.commits[i][DB.HASH] == commit.hash():
                 return True, i
             i += 1
 
