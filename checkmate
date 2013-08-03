@@ -6,6 +6,7 @@ import optparse
 import os
 import re
 import shlex
+import shutil
 import signal
 import subprocess
 import sys
@@ -104,6 +105,9 @@ def enum(*sequential, **named):
     reverse = dict((value, key) for key, value in enums.items())
     enums['to_enum'] = reverse
     return type('Enum', (), enums)
+
+def base_dir():
+    return os.path.dirname(os.path.realpath(__file__))
 
 #
 # Exceptions
@@ -481,6 +485,63 @@ class Config:
         return None
 
 #
+# HTML support
+#
+
+import jinja2 as jinja
+
+def D(*args):
+    return ('d', os.path.join(*args))
+
+def F(*args):
+    return ('f', os.path.join(*args))
+
+class HTMLOutput:
+    assets = (
+        D('css'),
+        D('js'),
+        F('css', 'bootstrap.min.css'),
+        F('js',  'bootstrap.min.js'),
+        F('js',  'jquery-1.10.2.min.js'),
+        F('js',  'd3.v3.min.js'),
+        F('js',  'simple-graph.js'),
+    )
+
+    def __init__(self, path):
+        self.path = path
+        if not os.path.isdir(path):
+            os.makedirs(path)
+
+        loader = jinja.FileSystemLoader(os.path.join(base_dir(), 'html'))
+        self.env = jinja.Environment(loader=loader,
+                                     trim_blocks=True,
+                                     # needs jinja 2.7
+                                     # lstrip_blocks=True,
+                                     )
+
+    def _ensure_assets(self):
+        for asset in self.__class__.assets:
+            type = asset[0]
+            path = asset[1]
+            if type == 'd':
+                try:
+                    os.makedirs(path)
+                except FileExistsError:
+                    pass
+            else:
+                relative = os.path.dirname(path)
+                shutil.copy(os.path.join(base_dir(), 'html', path),
+                            os.path.join(self.path, relative))
+
+    def render(self, project):
+        self._ensure_assets()
+
+        template = self.env.get_template('report.html')
+        res = template.render({ 'project': project, })
+        with open("report.html", "wb") as output:
+                output.write(bytes(res, 'utf-8'))
+
+#
 # Represents the software project we want to gather metrics on
 #
 
@@ -490,6 +551,8 @@ class Project:
         self.db = CommitDB(path)
         self.db.load()
         self.hash_dirs = {}
+
+        self.name = os.path.basename(os.path.abspath(path))
 
     def setup_hash_dir(self, name):
         git_sha = self.current_commit.hash()
@@ -587,6 +650,14 @@ class Project:
             metric.analyse(artefact, files)
             metric.output()
 
+    def report(self, directory='.', format='html'):
+        out = HTMLOutput(directory)
+        out.render(self)
+
+#
+# Main
+#
+
 usage = """Usage: mate [options] command"
 
 List of commands:
@@ -646,6 +717,9 @@ class Mate:
 
     def analyse(self, args):
         self._project_do('analyse', args)
+
+    def report(self, args):
+        self._project_do('report', args)
 
     def dispatch(self, cmd, args):
         if not mate._is_known_command(cmd):

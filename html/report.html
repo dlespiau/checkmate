@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>CheckMate report</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <!-- Bootstrap -->
+    <link href="css/bootstrap.min.css" rel="stylesheet" media="screen">
+
+    <script src="js/d3.v3.min.js"></script>
+    <script src="js/simple-graph.js"></script>
+    <style>
+      body {
+        padding-top: 50px;
+      }
+      .axis { font-size: 1.5em; }
+      .chart {
+        background-color: #F7F2C5;
+        width: 960px;
+        height: 500px;
+      }
+      circle, .line {
+        fill: none;
+        stroke: steelblue;
+        stroke-width: 2px; }
+      circle {
+        fill: white;
+        fill-opacity: 0.2;
+        cursor: move; }
+        circle.selected {
+          fill: #ff7f0e;
+          stroke: #ff7f0e; }
+        circle:hover {
+          fill: #ff7f0e;
+          stroke: #707f0e; }
+        circle.selected:hover {
+          fill: #ff7f0e;
+          stroke: #ff7f0e; }
+    </style>
+
+  </head>
+  <body>
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="#">CheckMate</a>
+        <div class="nav-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li class="active"><a href="#">Report</a></li>
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </div>
+
+    <div class="container">
+
+      <div class="starter-template">
+        <h1>{{ project.name }}</h1>
+        <p class="lead"></p>
+        <div id="chart1" class="chart"></div>
+        <script type="text/javascript">
+          graph = new SimpleGraph("chart1", {
+                                  "xmax": 60, "xmin": 0,
+                                  "ymax": 40, "ymin": 0, 
+                                  "title": "Simple Graph1",
+                                  "xlabel": "X Axis",
+                                  "ylabel": "Y Axis"  
+                                  });
+       </script>
+      </div>
+
+    </div><!-- /.container -->
+
+
+    <script src="js/jquery-1.10.2.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+  </body>
+</html>
