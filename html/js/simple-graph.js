@@ -356,7 +356,7 @@ SimpleGraph.prototype.redraw = function() {
         .on("touchstart.drag", self.yaxis_drag());
 
     gy.exit().remove();
-    self.plot.call(d3.behavior.zoom().x(self.x).y(self.y).on("zoom", self.redraw()));
+    self.plot.call(d3.behavior.zoom().x(self.x).on("zoom", self.redraw()));
     self.update();    
   }  
 }
