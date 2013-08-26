@@ -260,7 +260,7 @@ class Artefact:
         try:
             val = self.config.get_artefact(self._name())[var]
         except (KeyError, TypeError):
-            val = None
+            val = []
         return val
 
     def log_file(self, file_path=None):
@@ -339,8 +339,7 @@ class BuildArtefact(Artefact):
         self._artefact('make')
 
 invoke_vg_libtool = './libtool --mode=execute valgrind --tool=memcheck \
---leak-check=full --leak-resolution=high --num-callers=20 --track-origins=yes \
-%s'
+--leak-check=full --leak-resolution=high --num-callers=20 --track-origins=yes'
 
 class MemcheckArtefact(Artefact):
     name = 'memcheck'
@@ -353,8 +352,11 @@ class MemcheckArtefact(Artefact):
             raise CollectError("memcheck: FIXME: not implemented")
 
     def do_collect(self, file=None):
+        global invoke_vg_libtool
         #self._metadata('filename', file, file_path=file)
-        self._artefact(invoke_vg_libtool % file, file_path=file)
+        for s in self._config('suppressions'):
+            invoke_vg_libtool += " --suppressions=" + s
+        self._artefact(invoke_vg_libtool + ' ' + file, file_path=file)
 
 known_artefacts = (
         BuildArtefact,
