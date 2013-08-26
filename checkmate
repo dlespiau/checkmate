@@ -54,6 +54,7 @@ def error(msg):
 
 def execute(cmd, shell=False):
     args = shlex.split(cmd)
+    debug("executing: " + cmd)
     p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                          shell=shell)
     out, err = p.communicate()
@@ -71,6 +72,7 @@ def execute_to_file(cmd, filename, shell=False, append=False, env=None):
     if env:
         new_env.update(env)
 
+    debug("executing: " + cmd)
     p = subprocess.Popen(args, stdout=f, stderr=subprocess.STDOUT, shell=shell,
                          env=new_env)
     ret = p.wait()
