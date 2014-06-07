@@ -608,6 +608,15 @@ class Project:
     def is_using_libtool(self):
         return os.path.exists('libtool')
 
+    def is_linux_kernel(self):
+        return os.path.exists(os.path.join('Documentation',
+                                           'kernel-parameters.txt'))
+
+    def clean(self):
+        for d in ('artefacts', 'metrics'):
+            debug('Removing %s' % self.hash_dirs[d])
+            shutil.rmtree(self.hash_dirs[d])
+
     def _find_metric(self, name):
         for cls in known_metrics:
             if cls.name == name:
@@ -670,6 +679,7 @@ usage = """Usage: mate [options] command"
 
 List of commands:
     help                        display this help
+    clean [commit]              remove generated data (default to HEAD)
     collect [commit]            collect artefacts for commit (default to HEAD)
     analyse [commit]            analyse commit (default to HEAD)"""
 
@@ -719,6 +729,9 @@ class Mate:
             sys.exit(1)
         finally:
             project.fini()
+
+    def clean(self, args):
+        self._project_do('clean', args)
 
     def collect(self, args):
         self._project_do('collect_artefacts', args)
