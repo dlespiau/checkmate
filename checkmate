@@ -343,7 +343,7 @@ class BuildArtefact(Artefact):
         if not os.path.isfile('Makefile'):
             raise CollectError("%s has no Makefile" % self.project.path)
 
-    def do_collect(self, file=None):
+    def do_collect(self, files=None):
         if not self._can_skip():
             self._do('make clean')
         self._artefact('make')
@@ -361,7 +361,7 @@ class MemcheckArtefact(Artefact):
         if not self.project.is_using_libtool():
             raise CollectError("memcheck: FIXME: not implemented")
 
-    def do_collect(self, file=None):
+    def do_collect(self, files=None):
         global invoke_vg_libtool
         #self._metadata('filename', file, file_path=file)
         for s in self._config('suppressions'):
