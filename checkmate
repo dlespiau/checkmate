@@ -274,6 +274,13 @@ class Artefact:
             val = None
         return val
 
+    def _config__global(self, var):
+        try:
+            val = self.config.config[var]
+        except (KeyError, TypeError):
+            val = None
+        return val
+
     def log_file(self, file_path=None):
         if file_path:
             return os.path.join(self.artefact_dir, self._name() + '-' +
@@ -355,8 +362,8 @@ class BuildArtefact(Artefact):
             self._do('make clean')
         self._artefact('make')
 
-class KernelModuleBuildArtefact(Artefact):
-    name = 'kmod-build'
+class KernelBuildArtefact(Artefact):
+    name = 'linux-build'
 
     def do_ensure_collect(self):
         # Of course, this doesn't work with out of tree modules. Meh.
@@ -364,8 +371,27 @@ class KernelModuleBuildArtefact(Artefact):
             raise CollectError("%s is not a Linux kernel" % self.project.path)
 
     def do_collect(self, files=None):
-        self._do('make clean M=%s' % self._config('path'))
-        self._artefact('make M=%s' % self._config('path'))
+        path = self._config__global('linux-path')
+        if path:
+            self._do('make clean M=%s' % path)
+            self._artefact('make M=%s' % path)
+        else:
+            self._do('make clean')
+            self._artefact('make')
+
+class KernelSparseArtefact(Artefact):
+    name = 'linux-sparse'
+
+    def do_ensure_collect(self):
+        if not able_to_run('sparse --version'):
+            raise CollectError("sparse is not installed")
+
+    def do_collect(self, files=None):
+        path = self._config__global('linux-path')
+        if path:
+            self._artefact('make C=2 M=%s' % path)
+        else:
+            self._artefact('make C=2')
 
 invoke_vg_libtool = './libtool --mode=execute valgrind --tool=memcheck \
 --leak-check=full --leak-resolution=high --num-callers=20 --track-origins=yes'
@@ -389,7 +415,8 @@ class MemcheckArtefact(Artefact):
 
 known_artefacts = (
         BuildArtefact,
-        KernelModuleBuildArtefact,
+        KernelBuildArtefact,
+        KernelSparseArtefact,
         MemcheckArtefact,
 )
 
@@ -431,9 +458,37 @@ class Metric:
         self.do_output()
 
 
+class CompilationErrorMetric(Metric):
+    name = 'compilation-errors'
+    artefacts = ['build', 'linux-build']
+
+    def do_analyse(self, artefact, file=None):
+        r = re.compile(':[0-9]+:[0-9]+: error:')
+        with open(artefact.log_file(), 'r') as f:
+            for line in f:
+                if r.search(line):
+                    self.value += 1
+
+    def do_output(self):
+        self._info('%d errors' % self.value)
+
 class CompilationWarningMetric(Metric):
     name = 'compilation-warnings'
-    artefacts = ['build', 'kmod-build']
+    artefacts = ['build', 'linux-build']
+
+    def do_analyse(self, artefact, file=None):
+        r = re.compile(':[0-9]+:[0-9]+: warning:')
+        with open(artefact.log_file(), 'r') as f:
+            for line in f:
+                if r.search(line):
+                    self.value += 1
+
+    def do_output(self):
+        self._info('%d warnings' % self.value)
+
+class SparseWarningMetric(Metric):
+    name = 'sparse-warnings'
+    artefacts = ['linux-sparse']
 
     def do_analyse(self, artefact, file=None):
         r = re.compile(':[0-9]+:[0-9]+: warning:')
@@ -465,7 +520,9 @@ class MemcheckErrorMetric(Metric):
         self._info('%d errors' % self.value)
 
 known_metrics = (
+        CompilationErrorMetric,
         CompilationWarningMetric,
+        SparseWarningMetric,
         MemcheckErrorMetric,
 )
 
