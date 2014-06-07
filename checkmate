@@ -400,6 +400,58 @@ class KernelSparseArtefact(Artefact):
         else:
             self._artefact('make C=2')
 
+class KernelSparseArtefact(Artefact):
+    name = 'linux-sparse'
+
+    def do_ensure_collect(self):
+        if not able_to_run('sparse --version'):
+            raise CollectError("sparse is not installed")
+
+    def do_collect(self, files=None):
+        path = self._config__global('linux-path')
+        if path:
+            self._artefact('make C=2 M=%s' % path)
+        else:
+            self._artefact('make C=2')
+
+checkpatch_args = '--max-line-length=%(n_chars)s --no-summary %(extra-args)s'
+invoke_checkpatch = 'git format-patch --stdout -1 %(hash)s  | \
+./scripts/checkpatch.pl ' + checkpatch_args + ' -'
+invoke_checkpatch_files = './scripts/checkpatch.pl ' + checkpatch_args+ \
+                          ' -f %(files)s'
+
+class KernelCheckpatchArtefact(Artefact):
+    name = 'linux-checkpatch'
+
+    def do_ensure_collect(self):
+        # Of course, this doesn't work with out of tree modules. Meh.
+        if not self.project.is_linux_kernel():
+            raise CollectError("%s is not a Linux kernel" % self.project.path)
+
+    def do_collect(self, files=None):
+        n_chars = self._config__global('checkpatch-max-line-length') or 120
+        files = self._config__global('checkpatch-files')
+        extra_args = self._config__global('checkpatch-extra-args') or ''
+
+        if files:
+            self._artefact(invoke_checkpatch_files % {
+                            'n_chars' : n_chars,
+                            'extra-args': extra_args,
+                            'files': files,
+                           },
+                           shell=True)
+        else:
+            self._artefact(invoke_checkpatch % {
+                            'hash': self.commit.hash(),
+                            'n_chars' : n_chars,
+                            'extra-args': extra_args,
+                           },
+                           shell=True)
+
+# We could also get the list of files from the config file
+# self.
+# self._artefact('./scripts/checkpatch.pl --max-line-length=120 -f drivers/gpu/drm/i915/*.c --terse --no-summary')
+
 invoke_vg_libtool = './libtool --mode=execute valgrind --tool=memcheck \
 --leak-check=full --leak-resolution=high --num-callers=20 --track-origins=yes'
 
@@ -424,6 +476,7 @@ known_artefacts = (
         BuildArtefact,
         KernelBuildArtefact,
         KernelSparseArtefact,
+        KernelCheckpatchArtefact,
         MemcheckArtefact,
 )
 
@@ -507,6 +560,34 @@ class SparseWarningMetric(Metric):
     def do_output(self):
         self._info('%d warnings' % self.value)
 
+class CheckpatchErrorMetric(Metric):
+    name = 'checkpatch-errors'
+    artefacts = ['linux-checkpatch']
+
+    def do_analyse(self, artefact, file=None):
+        r = re.compile('^ERROR: ')
+        with open(artefact.log_file(), 'r') as f:
+            for line in f:
+                if r.search(line):
+                    self.value += 1
+
+    def do_output(self):
+        self._info('%d errors' % self.value)
+
+class CheckpatchWarningMetric(Metric):
+    name = 'checkpatch-warnings'
+    artefacts = ['linux-checkpatch']
+
+    def do_analyse(self, artefact, file=None):
+        r = re.compile('^WARNING: ')
+        with open(artefact.log_file(), 'r') as f:
+            for line in f:
+                if r.search(line):
+                    self.value += 1
+
+    def do_output(self):
+        self._info('%d warnings' % self.value)
+
 class MemcheckErrorMetric(Metric):
     name = 'memcheck-errors'
     description = "Number of errors reported by valgrind's memcheck tool"
@@ -530,6 +611,8 @@ known_metrics = (
         CompilationErrorMetric,
         CompilationWarningMetric,
         SparseWarningMetric,
+        CheckpatchErrorMetric,
+        CheckpatchWarningMetric,
         MemcheckErrorMetric,
 )
 
