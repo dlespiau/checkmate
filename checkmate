@@ -573,7 +573,10 @@ class Project:
             raise GitError("%s is not a git repository" % self.path)
 
         self.start_commit = GitCommit(self.path, 'HEAD')
-        self.current_commit = GitCommit(self.path, rev)
+        if rev == 'HEAD':
+            self.current_commit = self.start_commit
+        else:
+            self.current_commit = GitCommit(self.path, rev)
 
         ensure_directories(('.mate', ))
         self.setup_hash_dir('artefacts')
