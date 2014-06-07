@@ -55,7 +55,11 @@ def error(msg):
 #
 
 def execute(cmd, shell=False):
-    args = shlex.split(cmd)
+    if not shell:
+        args = shlex.split(cmd)
+    else:
+        args = cmd
+
     debug("executing: " + cmd)
     p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                          shell=shell)
@@ -63,7 +67,10 @@ def execute(cmd, shell=False):
     return out.decode('utf-8').strip(), p.returncode
 
 def execute_to_file(cmd, filename, shell=False, append=False, env=None):
-    args = shlex.split(cmd)
+    if not shell:
+        args = shlex.split(cmd)
+    else:
+        args = cmd
 
     if append:
         f = open(filename, 'a+')
