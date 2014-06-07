@@ -37,6 +37,8 @@ def _color_print(level, msg, stream = sys.stdout):
     stream.write('%s %s\n' % (level, msg))
 
 def debug(msg):
+    if not verbose:
+        return
     _color_print('debug', msg)
 
 def info(msg):
