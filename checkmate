@@ -488,6 +488,8 @@ class Config:
     def __getattr__(self, name):
         if name in Config.file:
             return Config.file[name]
+        elif name == 'artefacts':
+            return {}
 
         raise AttributeError("%r object has no attribute %r" %
                                          (type(self).__name__, name))
