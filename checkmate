@@ -454,10 +454,6 @@ known_metrics = (
 #
 
 class Config:
-    defaults = {
-            'metrics': [ { 'name': 'compilation-warnings' }, ]
-    }
-
     file = {}
 
     def __init__(self, filename):
@@ -470,17 +466,8 @@ class Config:
             raise ConfigError(detail)
 
     def __getattr__(self, name):
-        # metrics is a bit special, we append the one configured to the default
-        # ones
-        if name == 'metrics':
-            if 'metrics' in Config.file:
-                return Config.defaults['metrics'] + Config.file['metrics']
-            else:
-                return Config.defaults['metrics']
-        elif name in Config.file:
+        if name in Config.file:
             return Config.file[name]
-        elif name in Config.defaults:
-            return Config.defaults[name]
 
         raise AttributeError("%r object has no attribute %r" %
                                          (type(self).__name__, name))
