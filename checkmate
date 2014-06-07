@@ -313,6 +313,11 @@ class Artefact:
         with open(f, 'w+') as f:
             f.write("MATE_METADATA:%s:%s\n" % (key, val))
 
+    def do_ensure_collect():
+        pass
+
+    # Make sure we can actually run collect. Subclasses can override
+    # do_ensure_collect() to hook in there.
     def ensure_collect(self):
         self.do_ensure_collect()
 
@@ -323,12 +328,12 @@ class Artefact:
             raise CollectError("The '%s' artefact needs files to operate on" %
                                self._name())
 
+        self.ensure_collect()
+
         if files:
             for f in files:
-                self.ensure_collect()
                 self.do_collect(f)
         else:
-                self.ensure_collect()
                 self.do_collect()
 
 class BuildArtefact(Artefact):
