@@ -461,7 +461,7 @@ class Config:
             exec_file(filename, Config.file)
             debug("Loading config file: %s" % filename)
         except IOError:
-            debug("No config file found (%s)" % filename)
+            warn("No config found, create a .mateconfig file for this project")
         except Exception as detail:
             raise ConfigError(detail)
 
@@ -618,7 +618,13 @@ class Project:
         raise CollectError("'%s' has no associated artefact")
 
     def collect_artefacts(self):
-        for conf in self.config.metrics:
+        try:
+            metrics = self.config.metrics
+        except AttributeError:
+            warn("No metrics configured")
+            return
+
+        for conf in metrics:
             try:
                 metric = self._find_metric(conf['name'])
             except KeyError:
