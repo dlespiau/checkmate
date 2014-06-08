@@ -402,19 +402,19 @@ class KernelSparseArtefact(Artefact):
         else:
             self._artefact('make C=2')
 
-class KernelSparseArtefact(Artefact):
-    name = 'linux-sparse'
+class KernelSmatchArtefact(Artefact):
+    name = 'linux-smatch'
 
     def do_ensure_collect(self):
-        if not able_to_run('sparse --version'):
-            raise CollectError("sparse is not installed")
+        if not able_to_run('smatch --version'):
+            raise CollectError("smatch is not installed")
 
     def do_collect(self, files=None):
         path = self._config__global('linux-path')
         if path:
-            self._artefact('make C=2 M=%s' % path)
+            self._artefact('make CHECK="smatch -p=kernel" C=2 M=%s' % path)
         else:
-            self._artefact('make C=2')
+            self._artefact('make CHECK="smatch -p=kernel" C=2')
 
 checkpatch_args = '--max-line-length=%(n_chars)s --no-summary %(extra-args)s'
 invoke_checkpatch = 'git format-patch --stdout -1 %(hash)s  | \
@@ -478,6 +478,7 @@ known_artefacts = (
         BuildArtefact,
         KernelBuildArtefact,
         KernelSparseArtefact,
+        KernelSmatchArtefact,
         KernelCheckpatchArtefact,
         MemcheckArtefact,
 )
@@ -576,6 +577,20 @@ class SparseErrorMetric(Metric):
     def do_output(self):
         self._info('%d errors' % self.value)
 
+class SmatchWarningMetric(Metric):
+    name = 'smatch-warnings'
+    artefacts = ['linux-smatch']
+
+    def do_analyse(self, artefact, file=None):
+        r = re.compile('.[ch]:[0-9]+ ')
+        with open(artefact.log_file(), 'r') as f:
+            for line in f:
+                if r.search(line):
+                    self.value += 1
+
+    def do_output(self):
+        self._info('%d warnings' % self.value)
+
 class CheckpatchErrorMetric(Metric):
     name = 'checkpatch-errors'
     artefacts = ['linux-checkpatch']
@@ -628,6 +643,7 @@ known_metrics = (
         CompilationWarningMetric,
         SparseWarningMetric,
         SparseErrorMetric,
+        SmatchWarningMetric,
         CheckpatchErrorMetric,
         CheckpatchWarningMetric,
         MemcheckErrorMetric,
