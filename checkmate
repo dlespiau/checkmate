@@ -380,10 +380,12 @@ class KernelBuildArtefact(Artefact):
     def do_collect(self, files=None):
         path = self._config__global('linux-path')
         if path:
-            self._do('make clean M=%s' % path)
+            if not self._can_skip():
+                self._do('make clean M=%s' % path)
             self._artefact('make M=%s' % path)
         else:
-            self._do('make clean')
+            if not self._can_skip():
+                self._do('make clean')
             self._artefact('make')
 
 class KernelSparseArtefact(Artefact):
