@@ -156,6 +156,7 @@ class GitCommit:
         self.rev = rev
         self._short_hash = None
         self._timestamp = None
+        self._subject = None
 
         self._hash, ret = execute('git rev-parse %s' % self.rev)
         if ret:
@@ -186,6 +187,12 @@ class GitCommit:
                            self._hash)
 
         return self._timestamp
+
+    def subject(self):
+        if not self._subject:
+            self._subject, ret = execute('git show -s --format=%%s %s' %
+                                         self._hash)
+        return self._subject
 
     def checkout(self):
         if self._abbrev:
