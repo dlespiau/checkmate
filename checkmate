@@ -762,15 +762,9 @@ class Project:
 
         self.name = os.path.basename(os.path.abspath(path))
 
-    def setup_hash_dir(self, name):
-        git_sha = self.current_commit.hash()
-        hash_dir = os.path.join('.mate', name)
-        short_dir = os.path.join(hash_dir, git_sha[:2])
-        long_dir = os.path.join(short_dir, git_sha[2:])
-        self.hash_dirs[name] = long_dir
-        ensure_directories((hash_dir, short_dir, long_dir))
+        self.init()
 
-    def setup(self, rev='HEAD'):
+    def init(self):
         try:
             os.chdir(self.path)
         except FileNotFoundError:
@@ -781,6 +775,15 @@ class Project:
         if not os.path.isdir('.git'):
             raise GitError("%s is not a git repository" % self.path)
 
+    def setup_hash_dir(self, name):
+        git_sha = self.current_commit.hash()
+        hash_dir = os.path.join('.mate', name)
+        short_dir = os.path.join(hash_dir, git_sha[:2])
+        long_dir = os.path.join(short_dir, git_sha[2:])
+        self.hash_dirs[name] = long_dir
+        ensure_directories((hash_dir, short_dir, long_dir))
+
+    def setup(self, rev='HEAD'):
         self.start_commit = GitCommit(self.path, 'HEAD')
         if rev == 'HEAD':
             self.current_commit = self.start_commit
@@ -790,6 +793,8 @@ class Project:
         ensure_directories(('.mate', ))
         self.setup_hash_dir('artefacts')
         self.setup_hash_dir('metrics')
+
+        info("Checking %s" % self.current_commit.subject())
 
         # checkout the commit we want to inspect
         self.current_commit.checkout()
@@ -930,15 +935,28 @@ class Mate:
         usage()
 
     def _project_do(self, method, args):
-        rev = 'HEAD'
+        rev_list = ['HEAD']
         if len(args) > 0:
-            rev = args[0]
+            refspec = args[0]
+
+        if '..' in refspec:
+            # not perfect but suit my usage
+            output, ret = execute('git rev-list %s' % refspec)
+            if ret:
+                raise GitError("%s is not a valid refspec" % refspec)
+
+            rev_list = []
+            for rev in output.split('\n'):
+                rev_list.append(rev)
+        else:
+            rev_list[0] = refspec
 
         project = Project(options.directory)
 
         try:
-            project.setup(rev)
-            getattr(project, method)()
+            for rev in reversed(rev_list):
+                project.setup(rev)
+                getattr(project, method)()
         except Error as e:
             error(e.msg)
             sys.exit(1)
