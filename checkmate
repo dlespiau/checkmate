@@ -775,6 +775,8 @@ class Project:
         if not os.path.isdir('.git'):
             raise GitError("%s is not a git repository" % self.path)
 
+        self.start_commit = GitCommit(self.path, 'HEAD')
+
     def setup_hash_dir(self, name):
         git_sha = self.current_commit.hash()
         hash_dir = os.path.join('.mate', name)
@@ -784,7 +786,6 @@ class Project:
         ensure_directories((hash_dir, short_dir, long_dir))
 
     def setup(self, rev='HEAD'):
-        self.start_commit = GitCommit(self.path, 'HEAD')
         if rev == 'HEAD':
             self.current_commit = self.start_commit
         else:
