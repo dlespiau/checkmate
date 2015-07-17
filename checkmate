@@ -855,7 +855,7 @@ class Project:
             metrics = self.config.metrics
         except AttributeError:
             warn("No metrics configured")
-            return
+            sys.exit(0)
 
         for conf in metrics:
             try:
