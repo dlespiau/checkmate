@@ -1,0 +1,4 @@
+#!/bin/sh
+
+mkdir -p project-dummy/.git
+touch project-dummy/.mateconfig

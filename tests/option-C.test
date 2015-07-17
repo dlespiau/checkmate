@@ -1,0 +1,4 @@
+/*
+ * check-name: option: -C
+ * check-command: checkmate -C project-dummy clean
+ */

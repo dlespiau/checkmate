@@ -1,4 +1,5 @@
 check:
+	$(Q)cd tests && ./setup-tests
 	$(Q)cd tests && ./test-suite
 
 clean-check:
