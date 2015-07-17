@@ -785,7 +785,7 @@ class Project:
         self.hash_dirs[name] = long_dir
         ensure_directories((hash_dir, short_dir, long_dir))
 
-    def setup(self, rev='HEAD'):
+    def setup(self, rev='HEAD', verbose=True):
         if rev == 'HEAD':
             self.current_commit = self.start_commit
         else:
@@ -795,7 +795,8 @@ class Project:
         self.setup_hash_dir('artefacts')
         self.setup_hash_dir('metrics')
 
-        info("Checking %s" % self.current_commit.subject())
+        if verbose:
+            info("Checking '%s'" % self.current_commit.subject())
 
         # checkout the commit we want to inspect
         self.current_commit.checkout()
@@ -959,7 +960,7 @@ class Mate:
 
         try:
             for rev in reversed(rev_list):
-                project.setup(rev)
+                project.setup(rev, verbose=(method is not 'clean'))
                 getattr(project, method)()
         except Error as e:
             error(e.msg)
