@@ -1,0 +1,20 @@
+/*
+ * check-name: option: --help
+ * check-command: checkmate --help
+ *
+ * check-output-start
+Usage: mate [options] command"
+
+List of commands:
+    help                        display this help
+    clean [commit]              remove generated data (default to HEAD)
+    collect [commit]            collect artefacts for commit (default to HEAD)
+    analyse [commit]            analyse commit (default to HEAD)
+
+Options:
+  --version      show program's version number and exit
+  -h, --help     show this help message and exit
+  -v, --verbose  be more verbose
+  -C DIRECTORY   change to directory
+ * check-output-end
+ */
