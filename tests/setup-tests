@@ -2,3 +2,5 @@
 
 mkdir -p project-dummy/.git
 touch project-dummy/.mateconfig
+
+mkdir -p project-no-config/.git

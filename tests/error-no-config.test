@@ -1,0 +1,8 @@
+/*
+ * check-name: error: no .mateconfig
+ * check-command: checkmate -C project-no-config clean
+ *
+ * check-output-start
+[33mwarn:[0m No config found, create a .mateconfig file for this project
+ * check-output-end
+ */
