@@ -946,17 +946,17 @@ class Mate:
         if len(args) > 0:
             refspec = args[0]
 
-        if '..' in refspec:
-            # not perfect but suit my usage
-            output, ret = execute('git rev-list %s' % refspec)
-            if ret:
-                raise GitError("%s is not a valid refspec" % refspec)
+            if '..' in refspec:
+                # not perfect but suit my usage
+                output, ret = execute('git rev-list %s' % refspec)
+                if ret:
+                    raise GitError("%s is not a valid refspec" % refspec)
 
-            rev_list = []
-            for rev in output.split('\n'):
-                rev_list.append(rev)
-        else:
-            rev_list[0] = refspec
+                rev_list = []
+                for rev in output.split('\n'):
+                    rev_list.append(rev)
+            else:
+                rev_list[0] = refspec
 
         try:
             for rev in reversed(rev_list):
