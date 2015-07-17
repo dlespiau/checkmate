@@ -913,7 +913,7 @@ def parse_options(args):
             dest="verbose", default=False,
             help="be more verbose")
 
-    parser.add_option("-C", "", action="store_true", dest="directory",
+    parser.add_option("-C", "", action="store", dest="directory",
             default='.', help="change to directory")
 
     (options, args) = parser.parse_args()
@@ -939,6 +939,8 @@ class Mate:
         usage()
 
     def _project_do(self, method, args):
+        project = Project(options.directory)
+
         rev_list = ['HEAD']
         if len(args) > 0:
             refspec = args[0]
@@ -954,8 +956,6 @@ class Mate:
                 rev_list.append(rev)
         else:
             rev_list[0] = refspec
-
-        project = Project(options.directory)
 
         try:
             for rev in reversed(rev_list):
