@@ -929,8 +929,11 @@ class Mate:
         pass
 
     def _is_known_command(self, cmd):
-        fn = getattr(self, cmd)
-        return fn and fn not in ('dispatch', )
+        try:
+            fn = getattr(self, cmd)
+            return fn and fn not in ('dispatch', )
+        except:
+            pass
 
     def help(self, args):
         usage()
