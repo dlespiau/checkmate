@@ -1,0 +1,9 @@
+/*
+ * check-name: error: wrong command
+ * check-command: checkmate -C project-dummy invalid
+ * check-exit-value: 1
+ *
+ * check-output-start
+[31merror:[0m Unknown command 'invalid'
+ * check-output-end
+ */
