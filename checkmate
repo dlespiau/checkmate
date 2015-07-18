@@ -380,11 +380,13 @@ class KernelBuildArtefact(Artefact):
     name = 'linux-build'
 
     def do_ensure_collect(self):
-        # Of course, this doesn't work with out of tree modules. Meh.
         if not self.project.is_linux_kernel():
             raise CollectError("%s is not a Linux kernel" % self.project.path)
 
     def do_collect(self, files=None):
+        if not os.path.exists('.config'):
+            self._do('make x86_64_defconfig')
+
         path = self._config__global('linux-path')
         if path:
             if not self._can_skip():
