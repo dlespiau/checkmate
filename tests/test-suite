@@ -259,6 +259,7 @@ case "$1" in
 			0) echo "$2 passed !";;
 			1) echo "$2 failed !";;
 			2) echo "$2 can't be handled by $prog_name";;
+			3) echo "$2 is disabled";;
 		esac
 		;;
 	format)
