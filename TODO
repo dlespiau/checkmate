@@ -4,7 +4,20 @@
 - make -j$(n_cores + 1)
 - Count make errors as build errors:
   make: *** [modules] Error 2
+- Make the 'build' artefact a bit more meta: a class able to build everything
+  (kernel, autotools projects, ...) instead of having two build classes at the
+  same level (and select between them in the config file)
+- We should invalidate the DB if .mateconfig changes (keep a checksum of the
+  file in .mate)
+- show command showing artefacts
+
+== Maybe one day
+
+- Find a way to make all artefacts part of the git tree so a fetch/push also
+  transfers them
 
 == Tests
 
 - give a non-existent directory to -C
+- A more friendly error message for config errors (say if the artefact name is
+  unknown or invalid syntax)
