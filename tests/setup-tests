@@ -5,7 +5,7 @@ touch project-dummy/.mateconfig
 
 mkdir -p project-no-config/.git
 
-function repo_update()
+repo_update()
 {
 	[ "$NO_NETWORK" = 1 ] && return
 
