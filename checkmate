@@ -756,21 +756,21 @@ class HTMLOutput:
 class Project:
     def __init__(self, path):
         self.path = path
-        self.db = CommitDB(path)
-        self.db.load()
         self.hash_dirs = {}
-
         self.name = os.path.basename(os.path.abspath(path))
 
-        self.init()
+        self._init_checkout()
 
-    def init(self):
+    def _init_checkout(self):
         try:
             os.chdir(self.path)
         except FileNotFoundError:
             raise NotFound("%s not a directory" % self.path)
 
         self.config = Config('.mateconfig')
+
+        self.db = CommitDB('.')
+        self.db.load()
 
         if not os.path.isdir('.git'):
             raise GitError("%s is not a git repository" % self.path)
