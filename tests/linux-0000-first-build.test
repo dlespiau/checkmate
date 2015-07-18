@@ -1,0 +1,18 @@
+/*
+ * check-name: Build the linux kernel
+ * check-command: checkmate -C checkmate-test-linux analyse
+ *
+ * check-pre-script-start
+(cd checkmate-test-linux && git clean -xdf && git checkout test-first-build)
+ * check-pre-script-end
+ *
+ * check-output-start
+[32minfo:[0m Checking '.mateconfig'
+[32minfo:[0m f629211: Collecting artefact 'linux-build' for metric 'compilation-errors'
+[32minfo:[0m f629211: linux-build: Generating artefact 'linux-build'
+[32minfo:[0m f629211: Collecting artefact 'linux-build' for metric 'compilation-warnings'
+[32minfo:[0m f629211: linux-build: Artefact 'linux-build' already generated, skipping...
+[32minfo:[0m f629211: compilation-errors: 0 errors
+[32minfo:[0m f629211: compilation-warnings: 0 warnings
+ * check-output-end
+ */

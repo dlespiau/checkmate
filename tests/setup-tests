@@ -4,3 +4,19 @@ mkdir -p project-dummy/.git
 touch project-dummy/.mateconfig
 
 mkdir -p project-no-config/.git
+
+function repo_update()
+{
+	[ "$NO_NETWORK" = 1 ] && return
+
+	name=$1
+	url=https://github.com/dlespiau/$1.git
+
+	if [ ! -d "$name" ]; then
+		git clone $url
+	else
+		(cd $name && git fetch)
+	fi
+}
+
+repo_update checkmate-test-linux
