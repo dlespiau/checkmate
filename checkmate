@@ -349,7 +349,7 @@ class Artefact:
     def ensure_collect(self):
         self.do_ensure_collect()
 
-    # @files is there for artefacts that act on files (eg. 'memcheck' needs a
+    # @files is used by artefacts that act on files (eg. 'memcheck' needs a
     # program to run). It can be None.
     def collect(self, files):
         if self.__class__.need_file and not files:
