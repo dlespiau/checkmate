@@ -389,6 +389,10 @@ class KernelBuildArtefact(Artefact):
 
         path = self._config__global('linux-path')
         if path:
+            # always start by a full build. Sure it's slower but, from time to
+            # time it's necessary. A bit slower is better than having the build
+            # fail for weird reasons.
+            self._do('make')
             if not self._can_skip():
                 self._do('make clean M=%s' % path)
             self._artefact('make M=%s' % path)
