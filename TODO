@@ -1,0 +1,10 @@
+== Checkmate
+
+- README.adoc
+- make -j$(n_cores + 1)
+- Count make errors as build errors:
+  make: *** [modules] Error 2
+
+== Tests
+
+- give a non-existent directory to -C
