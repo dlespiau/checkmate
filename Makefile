@@ -9,4 +9,6 @@ clean-check:
 	               -o -name "*.test.error.expected" \
 	               -o -name "*.test.error.got" \
 	               -o -name "*.test.error.diff" \
+	               -o -name "*.test.pre.sh" \
+	               -o -name "*.test.post.sh" \
 	            \) -exec rm {} \;

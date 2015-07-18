@@ -1,6 +1,8 @@
 *.diff
 *.got
 *.expected
+*.pre.sh
+*.post.sh
 
 project-dummy
 project-no-config

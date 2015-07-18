@@ -131,6 +131,12 @@ do_test()
 	sed -n '/check-error-start/,/check-error-end/p' $file \
 		| grep -v check-error > "$file".error.expected
 
+	# pre and post scripts
+	sed -n '/check-pre-script-start/,/check-pre-script-end/p' $file \
+		| grep -v check-pre-script > "$file".pre.sh
+	sed -n '/check-post-script-start/,/check-post-script-end/p' $file \
+		| grep -v check-post-script > "$file".post.sh
+
 	# grab the expected exit value
 	get_value "check-exit-value" $file
 	if [ "$?" -eq "0" ]; then
@@ -140,10 +146,21 @@ do_test()
 	fi
 	verbose "Expecting exit value: $expected_exit_value"
 
+	sh "$file".pre.sh
+	if [ "$?" -ne "0" ]; then
+		error "pre-script failed"
+		return 1
+	fi
 
 	# grab the actual output & exit value
 	$cmd 1> $file.output.got 2> $file.error.got
 	actual_exit_value=$?
+
+	sh "$file".post.sh
+	if [ "$?" -ne "0" ]; then
+		error "post-script failed"
+		return 1
+	fi
 
 	for stream in output error; do
 		diff -u "$file".$stream.expected "$file".$stream.got > "$file".$stream.diff
