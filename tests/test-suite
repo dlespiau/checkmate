@@ -162,7 +162,7 @@ do_test()
 		return 1
 	fi
 
-	for stream in output error; do
+	for stream in error output; do
 		diff -u "$file".$stream.expected "$file".$stream.got > "$file".$stream.diff
 		if [ "$?" -ne "0" ]; then
 			error "actual $stream text does not match expected $stream text."
