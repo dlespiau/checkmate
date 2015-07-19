@@ -74,6 +74,7 @@ echo "    none                       runs the whole test suite"
 echo "    single file                runs the test in 'file'"
 echo "    format file [name [cmd]]   helps writing a new test case using cmd"
 echo "    reformat file              runs the test and ammend its output"
+echo "    reformat-all               runs reformat on all tests"
 echo
 echo "    help                       prints usage"
 }
@@ -351,6 +352,13 @@ do_reformat()
 	mv $file.reformat $file
 }
 
+do_reformat_all()
+{
+	for i in $tests_list; do
+		do_reformat "$i"
+	done
+}
+
 ##
 # arg_file(filename) - checks if filename exists
 arg_file()
@@ -390,6 +398,10 @@ case "$1" in
 	reformat)
 		arg_file "$2"
 		do_reformat "$2"
+		ret=$?
+		;;
+	reformat-all)
+		do_reformat_all "$2"
 		ret=$?
 		;;
 	help | *)
