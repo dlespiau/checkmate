@@ -11,9 +11,7 @@
  * check-output-start
 [32minfo:[0m Checking commit '.mateconfig'
 [32minfo:[0m cd2fbd5: == Collecting artefact 'linux-sparse' for metric 'sparse-errors'
-[32minfo:[0m cd2fbd5: linux-sparse: Generating artefact 'linux-sparse'
 [32minfo:[0m cd2fbd5: == Collecting artefact 'linux-sparse' for metric 'sparse-warnings'
-[32minfo:[0m cd2fbd5: linux-sparse: Artefact 'linux-sparse' already generated
 [32minfo:[0m cd2fbd5: == Metrics
 [32minfo:[0m cd2fbd5: sparse-errors: 0 errors
 [32minfo:[0m cd2fbd5: sparse-warnings: 37 warnings

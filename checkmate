@@ -353,6 +353,9 @@ class Artefact:
     def _name(self):
         return self.__class__.name
 
+    def _debug(self, msg):
+        debug('%s: %s: %s' % (self.commit.short_hash(), self._name(), msg))
+
     def _info(self, msg):
         info('%s: %s: %s' % (self.commit.short_hash(), self._name(), msg))
 
@@ -401,11 +404,11 @@ class Artefact:
             file_str = ''
 
         if self._can_skip(file_path):
-            self._info("Artefact '%s'%s already generated" %
-                       (self._name(), file_str))
+            self._debug("Artefact '%s'%s already generated" %
+                        (self._name(), file_str))
             return 0
         else:
-            self._info("Generating artefact '%s'%s" % (self._name(), file_str))
+            self._debug("Generating artefact '%s'%s" % (self._name(), file_str))
 
         env_vars = self._config__list('env')
         return execute_to_file(command, f,
