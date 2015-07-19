@@ -117,8 +117,10 @@ test_extract_scripts()
 
 	# pre and post scripts
 	sed -n '/check-pre-script-start/,/check-pre-script-end/p' $_file \
+		2> /dev/null \
 		| grep -v check-pre-script > "$_file".pre.sh
 	sed -n '/check-post-script-start/,/check-post-script-end/p' $_file \
+		2> /dev/null \
 		| grep -v check-post-script > "$_file".post.sh
 
 }
@@ -274,9 +276,7 @@ do_test_suite()
 	return 0
 }
 
-##
-# do_format(file[, name[, cmd]]) - helps a test writer to format test-suite tags
-do_format()
+do_format_internal()
 {
 	file="$1"
 	if [ -z "$2" ]; then
@@ -344,6 +344,20 @@ _EOF
 	return 0
 }
 
+##
+# do_format(file[, name[, cmd]]) - helps a test writer to format test-suite tags
+do_format()
+{
+	file=$1
+
+	# we create the test file if it doesn't exist, to stdio otherwise
+	if [ -e "$file" ]; then
+		do_format_internal "$1" "$2" "$3"
+	else
+		do_format_internal "$1" "$2" "$3" > $file
+	fi
+}
+
 do_reformat()
 {
 	file=$1
@@ -367,6 +381,9 @@ arg_file()
 		do_usage
 		exit 1
 	}
+
+	[ -n "$2" ] && return 0
+
 	[ -e "$1" ] || {
 		error "Can't open file $1"
 		exit 1
@@ -391,7 +408,7 @@ case "$1" in
 		esac
 		;;
 	format)
-		arg_file "$2"
+		arg_file "$2" 1
 		do_format "$2" "$3" "$4"
 		ret=$?
 		;;
