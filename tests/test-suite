@@ -111,7 +111,7 @@ test_get_command()
 	return 0
 }
 
-test_extact_scripts()
+test_extract_scripts()
 {
 	_file="$1"
 
@@ -200,7 +200,7 @@ do_test()
 	sed -n '/check-error-start/,/check-error-end/p' $file \
 		| grep -v check-error > "$file".error.expected
 
-	test_extact_scripts $file
+	test_extract_scripts $file
 
 	# grab the expected exit value
 	get_value "check-exit-value" $file
@@ -293,7 +293,7 @@ do_format()
 		fcmd="$3"
 	fi
 
-	test_extact_scripts $file
+	test_extract_scripts $file
 
 	test_run_pre_script $file > /dev/null
 
