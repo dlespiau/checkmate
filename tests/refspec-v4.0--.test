@@ -1,0 +1,19 @@
+/*
+ * check-name: Test we can use tag..
+ * check-command: checkmate -C checkmate-test-linux analyse v4.0..
+ *
+ * check-output-start
+[32minfo:[0m Checking commit '.mateconfig'
+[32minfo:[0m e71705d: == Collecting artefact 'linux-checkpatch' for metric 'checkpatch-errors'
+[32minfo:[0m e71705d: == Collecting artefact 'linux-checkpatch' for metric 'checkpatch-warnings'
+[32minfo:[0m e71705d: == Metrics
+[32minfo:[0m e71705d: checkpatch-errors: 0 errors
+[32minfo:[0m e71705d: checkpatch-warnings: 1 warnings
+[32minfo:[0m Checking commit 'A commit that should make checkpatch unhappy'
+[32minfo:[0m 3bfad8e: == Collecting artefact 'linux-checkpatch' for metric 'checkpatch-errors'
+[32minfo:[0m 3bfad8e: == Collecting artefact 'linux-checkpatch' for metric 'checkpatch-warnings'
+[32minfo:[0m 3bfad8e: == Metrics
+[32minfo:[0m 3bfad8e: checkpatch-errors: 2 errors
+[32minfo:[0m 3bfad8e: checkpatch-warnings: 1 warnings
+ * check-output-end
+ */
