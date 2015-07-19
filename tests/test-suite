@@ -339,7 +339,7 @@ _EOF
 
 	echo " */"
 
-	test_cleanup
+	test_cleanup $file
 
 	return 0
 }
