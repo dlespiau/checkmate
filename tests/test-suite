@@ -73,6 +73,7 @@ echo "commands:"
 echo "    none                       runs the whole test suite"
 echo "    single file                runs the test in 'file'"
 echo "    format file [name [cmd]]   helps writing a new test case using cmd"
+echo "    reformat file              runs the test and ammend its output"
 echo
 echo "    help                       prints usage"
 }
@@ -342,6 +343,14 @@ _EOF
 	return 0
 }
 
+do_reformat()
+{
+	file=$1
+
+	do_format $file > $file.reformat
+	mv $file.reformat $file
+}
+
 ##
 # arg_file(filename) - checks if filename exists
 arg_file()
@@ -376,6 +385,11 @@ case "$1" in
 	format)
 		arg_file "$2"
 		do_format "$2" "$3" "$4"
+		ret=$?
+		;;
+	reformat)
+		arg_file "$2"
+		do_reformat "$2"
 		ret=$?
 		;;
 	help | *)
