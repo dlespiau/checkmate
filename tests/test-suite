@@ -77,6 +77,82 @@ echo
 echo "    help                       prints usage"
 }
 
+test_get_name()
+{
+	_test_name="Unknown"
+
+	get_value "check-name" $file
+	if [ "$?" -eq 1 ]; then
+		echo "warning: test '$file' unhandled"
+		unhandled_tests=`expr $unhandled_tests + 1`
+		return 2
+	else
+		_test_name=$last_result
+	fi
+
+	last_result=`echo $_test_name |  sed -e 's/^ *//'`
+	return 0
+}
+
+test_get_command()
+{
+	_file="$1"
+
+	_cmd=`eval echo $default_path/$default_cmd`
+	get_value "check-command" $_file
+	if [ "$?" -eq "0" ]; then
+		_result=`echo $last_result | sed -e 's/^ *//'`
+		_cmd=`eval echo $_result`
+	fi
+
+	last_result=$_cmd
+	return 0
+}
+
+test_extact_scripts()
+{
+	_file="$1"
+
+	# pre and post scripts
+	sed -n '/check-pre-script-start/,/check-pre-script-end/p' $_file \
+		| grep -v check-pre-script > "$_file".pre.sh
+	sed -n '/check-post-script-start/,/check-post-script-end/p' $_file \
+		| grep -v check-post-script > "$_file".post.sh
+
+}
+
+test_run_pre_script()
+{
+	_file="$1"
+
+	sh "$_file".pre.sh
+	if [ "$?" -ne "0" ]; then
+		error "pre-script failed"
+		return 1
+	fi
+}
+
+test_run_post_script()
+{
+	_file="$1"
+
+	sh "$_file".post.sh
+	if [ "$?" -ne "0" ]; then
+		error "post-script failed"
+		return 1
+	fi
+}
+
+test_cleanup()
+{
+	_file="$1"
+
+	# on sucess, remove all the files that have been generated
+	rm -f $_file.error.diff $_file.error.expected $_file.error.got \
+	      $_file.output.diff $_file.output.expected $_file.output.got \
+	      $_file.pre.sh $_file.post.sh
+}
+
 ##
 # do_test(file) - tries to validate a test case
 #
@@ -94,21 +170,12 @@ do_test()
 
 	# can this test be handled by test-suite ?
 	# (it has to have a check-name key in it)
-	get_value "check-name" $file
-	if [ "$?" -eq 1 ]; then
-		echo "warning: test '$file' unhandled"
-		unhandled_tests=`expr $unhandled_tests + 1`
-		return 2
-	fi
+	test_get_name $file
 	test_name=$last_result
 
 	# does the test provide a specific command ?
-	cmd=`eval echo $default_path/$default_cmd`
-	get_value "check-command" $file
-	if [ "$?" -eq "0" ]; then
-		last_result=`echo $last_result | sed -e 's/^ *//'`
-		cmd=`eval echo $default_path/$last_result`
-	fi
+	test_get_command $file
+	cmd=$default_path/$last_result
 
 	# check for disabled commands
 	set -- $cmd
@@ -131,11 +198,7 @@ do_test()
 	sed -n '/check-error-start/,/check-error-end/p' $file \
 		| grep -v check-error > "$file".error.expected
 
-	# pre and post scripts
-	sed -n '/check-pre-script-start/,/check-pre-script-end/p' $file \
-		| grep -v check-pre-script > "$file".pre.sh
-	sed -n '/check-post-script-start/,/check-post-script-end/p' $file \
-		| grep -v check-post-script > "$file".post.sh
+	test_extact_scripts $file
 
 	# grab the expected exit value
 	get_value "check-exit-value" $file
@@ -146,21 +209,13 @@ do_test()
 	fi
 	verbose "Expecting exit value: $expected_exit_value"
 
-	sh "$file".pre.sh
-	if [ "$?" -ne "0" ]; then
-		error "pre-script failed"
-		return 1
-	fi
+	test_run_pre_script $file
 
 	# grab the actual output & exit value
 	$cmd 1> $file.output.got 2> $file.error.got
 	actual_exit_value=$?
 
-	sh "$file".post.sh
-	if [ "$?" -ne "0" ]; then
-		error "post-script failed"
-		return 1
-	fi
+	test_run_post_script $file
 
 	for stream in error output; do
 		diff -u "$file".$stream.expected "$file".$stream.got > "$file".$stream.diff
@@ -178,10 +233,7 @@ do_test()
 		return 1
 	fi
 
-	# on sucess, remove all the files that have been generated
-	rm -f $file.error.diff $file.error.expected $file.error.got \
-	      $file.output.diff $file.output.expected $file.output.got \
-	      $file.pre.sh $file.post.sh
+	test_cleanup $file
 
 	return 0
 }
