@@ -4,8 +4,8 @@
  *
  * check-pre-script-start
 ../checkmate -C checkmate-test-linux clean
-(cd checkmate-test-linux && git checkout test-checkpatch && \
- git reset --hard origin/test-checkpatch)
+(cd checkmate-test-linux && git checkout test-checkpatch-files && \
+ git reset --hard origin/test-checkpatch-files)
  * check-pre-script-end
  *
  * check-output-start
