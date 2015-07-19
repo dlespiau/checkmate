@@ -276,20 +276,31 @@ do_test_suite()
 # do_format(file[, name[, cmd]]) - helps a test writer to format test-suite tags
 do_format()
 {
+	file="$1"
 	if [ -z "$2" ]; then
-		fname="$1"
-		fcmd=$default_cmd
+		test_get_name $file
+		fname=$last_result
+		test_get_command $file
+		fcmd=$last_result
 	elif [ -z "$3" ]; then
 		fname="$2"
-		fcmd=$default_cmd
+		test_get_command $fname
+		fcmd=$last_result
 	else
 		fname="$2"
 		fcmd="$3"
 	fi
-	file="$1"
+
+	test_extact_scripts $file
+
+	test_run_pre_script $file > /dev/null
+
 	cmd=`eval echo $default_path/$fcmd`
 	$cmd 1> $file.output.got 2> $file.error.got
 	fexit_value=$?
+
+	test_run_post_script $file > /dev/null
+
 	cat <<_EOF
 /*
  * check-name: $fname
@@ -300,6 +311,14 @@ _EOF
 	if [ "$fexit_value" -ne "0" ]; then
 		echo " * check-exit-value: $fexit_value"
 	fi
+
+	if [ -s "$file.pre.sh" ]; then
+			echo " *"
+			echo " * check-pre-script-start"
+			cat "$file.pre.sh"
+			echo " * check-pre-script-end"
+	fi
+
 	for stream in output error; do
 		if [ -s "$file.$stream.got" ]; then
 			echo " *"
@@ -308,7 +327,18 @@ _EOF
 			echo " * check-$stream-end"
 		fi
 	done
+
+	if [ -s "$file.post" ]; then
+			echo " *"
+			echo " * check-post-script-start"
+			cat "$file.post.sh"
+			echo " * check-post-script-end"
+	fi
+
 	echo " */"
+
+	test_cleanup
+
 	return 0
 }
 
