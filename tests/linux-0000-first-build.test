@@ -11,11 +11,12 @@ fi
  * check-pre-script-end
  *
  * check-output-start
-[32minfo:[0m Checking '.mateconfig'
-[32minfo:[0m f629211: Collecting artefact 'linux-build' for metric 'compilation-errors'
+[32minfo:[0m Checking commit '.mateconfig'
+[32minfo:[0m f629211: == Collecting artefact 'linux-build' for metric 'compilation-errors'
 [32minfo:[0m f629211: linux-build: Generating artefact 'linux-build'
-[32minfo:[0m f629211: Collecting artefact 'linux-build' for metric 'compilation-warnings'
-[32minfo:[0m f629211: linux-build: Artefact 'linux-build' already generated, skipping...
+[32minfo:[0m f629211: == Collecting artefact 'linux-build' for metric 'compilation-warnings'
+[32minfo:[0m f629211: linux-build: Artefact 'linux-build' already generated
+[32minfo:[0m f629211: == Metrics
 [32minfo:[0m f629211: compilation-errors: 0 errors
 [32minfo:[0m f629211: compilation-warnings: 0 warnings
  * check-output-end

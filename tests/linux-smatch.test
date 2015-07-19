@@ -9,9 +9,10 @@
  * check-pre-script-end
  *
  * check-output-start
-[32minfo:[0m Checking '.mateconfig'
-[32minfo:[0m 18d3503: Collecting artefact 'linux-smatch' for metric 'smatch-warnings'
+[32minfo:[0m Checking commit '.mateconfig'
+[32minfo:[0m 18d3503: == Collecting artefact 'linux-smatch' for metric 'smatch-warnings'
 [32minfo:[0m 18d3503: linux-smatch: Generating artefact 'linux-smatch'
+[32minfo:[0m 18d3503: == Metrics
 [32minfo:[0m 18d3503: smatch-warnings: 30 warnings
  * check-output-end
  */

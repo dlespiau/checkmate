@@ -401,7 +401,7 @@ class Artefact:
             file_str = ''
 
         if self._can_skip(file_path):
-            self._info("Artefact '%s'%s already generated, skipping..." %
+            self._info("Artefact '%s'%s already generated" %
                        (self._name(), file_str))
             return 0
         else:
@@ -886,7 +886,7 @@ class Project:
         self.setup_hash_dir('metrics')
 
         if verbose:
-            info("Checking '%s'" % self.current_commit.subject())
+            info("Checking commit '%s'" % self.current_commit.subject())
 
         # checkout the commit we want to inspect
         self.current_commit.checkout()
@@ -956,7 +956,7 @@ class Project:
 
             artefact = self._find_artefact(metric, conf)
 
-            self._info("Collecting artefact '%s' for metric '%s'" %
+            self._info("== Collecting artefact '%s' for metric '%s'" %
                        (artefact.name, metric.name))
 
             files = metric.get_config_var('files')
@@ -967,6 +967,8 @@ class Project:
     def analyse(self):
         # start by making sure we have the necessary artefacts
         self.collect_artefacts()
+
+        self._info("== Metrics")
 
         for conf in self.config.metrics:
             try:
