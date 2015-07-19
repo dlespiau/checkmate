@@ -1,0 +1,19 @@
+/*
+ * check-name: Run checkpatch.pl on a commit
+ * check-command: checkmate -C checkmate-test-linux analyse
+ *
+ * check-pre-script-start
+../checkmate -C checkmate-test-linux clean
+(cd checkmate-test-linux && git checkout test-checkpatch && \
+ git reset --hard origin/test-checkpatch)
+ * check-pre-script-end
+ *
+ * check-output-start
+[32minfo:[0m Checking commit 'A commit that should make checkpatch unhappy'
+[32minfo:[0m 3bfad8e: == Collecting artefact 'linux-checkpatch' for metric 'checkpatch-errors'
+[32minfo:[0m 3bfad8e: == Collecting artefact 'linux-checkpatch' for metric 'checkpatch-warnings'
+[32minfo:[0m 3bfad8e: == Metrics
+[32minfo:[0m 3bfad8e: checkpatch-errors: 1 errors
+[32minfo:[0m 3bfad8e: checkpatch-warnings: 1 warnings
+ * check-output-end
+ */
