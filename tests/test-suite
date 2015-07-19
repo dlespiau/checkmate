@@ -178,6 +178,11 @@ do_test()
 		return 1
 	fi
 
+	# on sucess, remove all the files that have been generated
+	rm -f $file.error.diff $file.error.expected $file.error.got \
+	      $file.output.diff $file.output.expected $file.output.got \
+	      $file.pre.sh $file.post.sh
+
 	return 0
 }
 
