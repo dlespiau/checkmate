@@ -23,3 +23,5 @@
 - checkpatch test
 - A more friendly error message for config errors (say if the artefact name is
   unknown or invalid syntax)
+- Using a tag as refspec doesn't give a hash (and wong log messaged as well a
+  corrupted DB)
