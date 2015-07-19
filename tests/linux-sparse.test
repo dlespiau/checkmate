@@ -4,7 +4,8 @@
  *
  * check-pre-script-start
 ../checkmate -C checkmate-test-linux clean
-(cd checkmate-test-linux && git checkout test-sparse)
+(cd checkmate-test-linux && git checkout test-sparse && \
+ git reset --hard origin/test-sparse)
  * check-pre-script-end
  *
  * check-output-start
