@@ -2,6 +2,12 @@
  * check-name: Test we can use a hash
  * check-command: checkmate -C checkmate-test-linux analyse e71705db105bb9cb8f2c89e1b3fd96f40f0230e4
  *
+ * check-pre-script-start
+../checkmate -C checkmate-test-linux clean
+(cd checkmate-test-linux && git checkout test-checkpatch && \
+ git reset --hard origin/test-checkpatch)
+ * check-pre-script-end
+ *
  * check-output-start
 [32minfo:[0m Checking commit '.mateconfig'
 [32minfo:[0m e71705d: == Collecting artefact 'linux-checkpatch' for metric 'checkpatch-errors'
