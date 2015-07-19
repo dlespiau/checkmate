@@ -1,0 +1,21 @@
+#!/bin/sh -e
+
+repo_update()
+{
+	[ "$NO_NETWORK" = 1 ] && return
+
+	name=$1
+	url=$2
+
+	if [ ! -d "$name" ]; then
+		git clone $url
+	else
+		(cd $name && git fetch)
+	fi
+}
+
+mkdir -p tools/sources
+cd tools/sources
+
+repo_update sparse https://git.kernel.org/pub/scm/devel/sparse/sparse.git
+(cd sparse && make && make install DESTDIR="../../" PREFIX="" 1>/dev/null)

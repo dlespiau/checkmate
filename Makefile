@@ -1,6 +1,9 @@
 check:
-	$(Q)cd tests && ./setup-tests
-	$(Q)cd tests && ./test-suite
+	$(Q)(cd tests && \
+	     export PATH=$$PWD/tools/bin:$$PATH && \
+	     ./setup-tools && \
+	     ./setup-tests && \
+	     ./test-suite)
 
 clean-check:
 	find tests/ \( -name "*.test.output.expected" \
