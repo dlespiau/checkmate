@@ -120,6 +120,87 @@ def enum(*sequential, **named):
 def base_dir():
     return os.path.dirname(os.path.realpath(__file__))
 
+# programming by copy/pasting from stackoverflow is the best:
+# http://stackoverflow.com/questions/1006289/how-to-find-out-the-number-of-cpus-using-python
+def get_n_cpus():
+    # Python 2.6+
+    try:
+        import multiprocessing
+        return multiprocessing.cpu_count()
+    except (ImportError, NotImplementedError):
+        pass
+
+    # http://code.google.com/p/psutil/
+    try:
+        import psutil
+        return psutil.cpu_count()   # psutil.NUM_CPUS on old versions
+    except (ImportError, AttributeError):
+        pass
+
+    # POSIX
+    try:
+        res = int(os.sysconf('SC_NPROCESSORS_ONLN'))
+
+        if res > 0:
+            return res
+    except (AttributeError, ValueError):
+        pass
+
+    # Windows
+    try:
+        res = int(os.environ['NUMBER_OF_PROCESSORS'])
+
+        if res > 0:
+            return res
+    except (KeyError, ValueError):
+        pass
+
+    # jython
+    try:
+        from java.lang import Runtime
+        runtime = Runtime.getRuntime()
+        res = runtime.availableProcessors()
+        if res > 0:
+            return res
+    except ImportError:
+        pass
+
+    # BSD
+    try:
+        sysctl = subprocess.Popen(['sysctl', '-n', 'hw.ncpu'],
+                                  stdout=subprocess.PIPE)
+        scStdout = sysctl.communicate()[0]
+        res = int(scStdout)
+
+        if res > 0:
+            return res
+    except (OSError, ValueError):
+        pass
+
+    # Linux
+    try:
+        res = open('/proc/cpuinfo').read().count('processor\t:')
+
+        if res > 0:
+            return res
+    except IOError:
+        pass
+
+    # Solaris
+    try:
+        pseudoDevices = os.listdir('/devices/pseudo/')
+        res = 0
+        for pd in pseudoDevices:
+            if re.match(r'^cpuid@[0-9]+$', pd):
+                res += 1
+
+        if res > 0:
+            return res
+    except OSError:
+        pass
+
+    raise Exception('Can not determine number of CPUs on this system')
+
 #
 # Exceptions
 #
@@ -265,6 +346,7 @@ class Artefact:
         self.commit = project.current_commit
         self.artefact_dir = project.hash_dirs['artefacts']
         self.args = args
+        self.n_cpus = get_n_cpus()
 
         self._has_metadata = False
 
@@ -374,7 +456,7 @@ class BuildArtefact(Artefact):
     def do_collect(self, files=None):
         if not self._can_skip():
             self._do('make clean')
-        self._artefact('make')
+        self._artefact('make  -j%d' % (self.n_cpus + 1))
 
 class KernelBuildArtefact(Artefact):
     name = 'linux-build'
@@ -385,21 +467,21 @@ class KernelBuildArtefact(Artefact):
 
     def do_collect(self, files=None):
         if not os.path.exists('.config'):
-            self._do('make x86_64_defconfig')
+            self._do('make  x86_64_defconfig')
 
         path = self._config__global('linux-path')
         if path:
             # always start by a full build. Sure it's slower but, from time to
             # time it's necessary. A bit slower is better than having the build
             # fail for weird reasons.
-            self._do('make')
+            self._do('make -j%d' % (self.n_cpus + 1))
             if not self._can_skip():
                 self._do('make clean M=%s' % path)
-            self._artefact('make M=%s' % path)
+            self._artefact('make -j%d M=%s' % (self.n_cpus + 1, path))
         else:
             if not self._can_skip():
                 self._do('make clean')
-            self._artefact('make')
+        self._artefact('make  -j%d' % (self.n_cpus + 1))
 
 class KernelSparseArtefact(Artefact):
     name = 'linux-sparse'
@@ -411,9 +493,9 @@ class KernelSparseArtefact(Artefact):
     def do_collect(self, files=None):
         path = self._config__global('linux-path')
         if path:
-            self._artefact('make C=2 M=%s' % path)
+            self._artefact('make -j%d C=2 M=%s' % (self.n_cpus + 1, path))
         else:
-            self._artefact('make C=2')
+            self._artefact('make -j%d C=2' % (self.n_cpus + 1))
 
 class KernelSmatchArtefact(Artefact):
     name = 'linux-smatch'
@@ -425,9 +507,11 @@ class KernelSmatchArtefact(Artefact):
     def do_collect(self, files=None):
         path = self._config__global('linux-path')
         if path:
-            self._artefact('make CHECK="smatch -p=kernel" C=2 M=%s' % path)
+            self._artefact('make -j%d CHECK="smatch -p=kernel" C=2 M=%s' %
+                           (self.n_cpus + 1, path))
         else:
-            self._artefact('make CHECK="smatch -p=kernel" C=2')
+            self._artefact('make -j%d CHECK="smatch -p=kernel" C=2' %
+                           (self.n_cpus + 1))
 
 checkpatch_args = '--max-line-length=%(n_chars)s --no-summary %(extra-args)s'
 invoke_checkpatch = 'git format-patch --stdout -1 %(hash)s  | \

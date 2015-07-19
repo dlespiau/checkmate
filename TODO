@@ -1,7 +1,6 @@
 == Checkmate
 
 - README.adoc
-- make -j$(n_cores + 1)
 - Count make errors as build errors:
   make: *** [modules] Error 2
 - Make the 'build' artefact a bit more meta: a class able to build everything
