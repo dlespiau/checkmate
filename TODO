@@ -20,7 +20,6 @@
 - give a non-existent directory to -C
 - test that generates errors (linux-build)
 - test that generates warnings (linux-build)
-- checkpatch test
 - A more friendly error message for config errors (say if the artefact name is
   unknown or invalid syntax)
 - Using a tag as refspec doesn't give a hash (and wong log messaged as well a
