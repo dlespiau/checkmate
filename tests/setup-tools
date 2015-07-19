@@ -17,5 +17,16 @@ repo_update()
 mkdir -p tools/sources
 cd tools/sources
 
+# install smatch before sparse so the sparse binary is the from the spare
+# repo
+
+echo "== smatch"
+# smatch development is rather active (compare to sparse), so checkout a tag
+# for test results consistency
+repo_update smatch http://repo.or.cz/smatch.git
+(cd smatch && git checkout 1.60 && \
+ make && make install DESTDIR="../../" PREFIX="" 1>/dev/null)
+
+echo "== sparse"
 repo_update sparse https://git.kernel.org/pub/scm/devel/sparse/sparse.git
 (cd sparse && make && make install DESTDIR="../../" PREFIX="" 1>/dev/null)

@@ -1,0 +1,16 @@
+/*
+ * check-name: Run smatch on drm/i915
+ * check-command: checkmate -C checkmate-test-linux analyse
+ *
+ * check-pre-script-start
+../checkmate -C checkmate-test-linux clean
+(cd checkmate-test-linux && git checkout test-smatch)
+ * check-pre-script-end
+ *
+ * check-output-start
+[32minfo:[0m Checking '.mateconfig'
+[32minfo:[0m 18d3503: Collecting artefact 'linux-smatch' for metric 'smatch-warnings'
+[32minfo:[0m 18d3503: linux-smatch: Generating artefact 'linux-smatch'
+[32minfo:[0m 18d3503: smatch-warnings: 25 warnings
+ * check-output-end
+ */
