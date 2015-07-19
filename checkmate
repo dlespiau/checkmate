@@ -481,7 +481,7 @@ class KernelBuildArtefact(Artefact):
         else:
             if not self._can_skip():
                 self._do('make clean')
-        self._artefact('make  -j%d' % (self.n_cpus + 1))
+            self._artefact('make  -j%d' % (self.n_cpus + 1))
 
 class KernelSparseArtefact(Artefact):
     name = 'linux-sparse'
