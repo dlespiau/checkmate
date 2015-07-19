@@ -13,7 +13,7 @@
 [32minfo:[0m 3bfad8e: == Collecting artefact 'linux-checkpatch' for metric 'checkpatch-errors'
 [32minfo:[0m 3bfad8e: == Collecting artefact 'linux-checkpatch' for metric 'checkpatch-warnings'
 [32minfo:[0m 3bfad8e: == Metrics
-[32minfo:[0m 3bfad8e: checkpatch-errors: 1 errors
+[32minfo:[0m 3bfad8e: checkpatch-errors: 2 errors
 [32minfo:[0m 3bfad8e: checkpatch-warnings: 1 warnings
  * check-output-end
  */
