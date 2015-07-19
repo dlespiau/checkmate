@@ -201,7 +201,7 @@ do_test_suite()
 
 	# prints some numbers
 	tests_nr=`expr $ok_tests + $ko_tests`
-	echo -n "Out of $tests_nr tests, $ok_tests passed, $ko_tests failed"
+	echo "Out of $tests_nr tests, $ok_tests passed, $ko_tests failed"
 	if [ "$unhandled_tests" -ne "0" ]; then
 		echo "$unhandled_tests tests could not be handled by $prog_name"
 	fi
