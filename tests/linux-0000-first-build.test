@@ -3,9 +3,8 @@
  * check-command: checkmate -C checkmate-test-linux analyse
  *
  * check-pre-script-start
-if [ x"$NO_GIT_CLEAN" = x1 ]; then
-	../checkmate -C checkmate-test-linux clean
-else
+../checkmate -C checkmate-test-linux clean
+if [ x"$NO_GIT_CLEAN" != x1 ]; then
 	(cd checkmate-test-linux && git clean -xdf)
 fi
 (cd checkmate-test-linux && git checkout test-first-build)
