@@ -1,5 +1,5 @@
 /*
- * check-name: Build the linux kernel
+ * check-name: Run sparse on drm/i915
  * check-command: checkmate -C checkmate-test-linux analyse
  *
  * check-pre-script-start
