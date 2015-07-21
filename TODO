@@ -13,6 +13,8 @@
 - kdoc warnings for drm and i915 only
 - gtkdoc warnings (i-g-t)
 - distcheck (i-g-t)
+- cppcheck -f -q --template=gcc --enable=all --language=c
+- MODE=report/patch? scripts/coccicheck
 
 == Maybe one day
 
