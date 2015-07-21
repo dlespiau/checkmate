@@ -9,6 +9,10 @@
 - We should invalidate the DB if .mateconfig changes (keep a checksum of the
   file in .mate)
 - show command showing artefacts
+- kdoc warnings
+- kdoc warnings for drm and i915 only
+- gtkdoc warnings (i-g-t)
+- distcheck (i-g-t)
 
 == Maybe one day
 
