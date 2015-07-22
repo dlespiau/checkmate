@@ -268,13 +268,6 @@ python_coverage_finish()
 	python-coverage html
 }
 
-do_single()
-{
-	python_coverage_start
-	do_test "$1"
-	python_coverage_finish
-}
-
 do_test_suite()
 {
 	python_coverage_start
@@ -443,7 +436,7 @@ case "$1" in
 		;;
 	single)
 		arg_file "$2"
-		do_single "$2"
+		do_test "$2"
 		case "$?" in
 			0) echo "$2 passed!";;
 			1) echo "$2 failed!"; ret=1;;
