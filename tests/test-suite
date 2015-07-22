@@ -23,6 +23,10 @@ ok_tests=0
 ko_tests=0
 known_ko_tests=0
 
+# python coverage
+want_python_coverage=1		# if tested project is written in python
+enable_python_coverage=0	# enabled if python-coverage exists
+
 # defaults to not verbose
 [ -z "$V" ] && V=0
 
@@ -192,6 +196,13 @@ do_test()
 		fi
 	done
 
+	if [ $enable_python_coverage = 1 ]; then
+		cov_cmd="python-coverage run --branch -a"
+		cov_cmd="$cov_cmd --source=$default_path"
+		cov_cmd="$cov_cmd --omit=*.mateconfig"
+		cmd="$cov_cmd $cmd"
+	fi
+
 	echo "     TEST    $test_name ($file)"
 
 	verbose "Using command       : $cmd"
@@ -242,8 +253,32 @@ do_test()
 	return 0
 }
 
+python_coverage_start()
+{
+	[ $enable_python_coverage = 0 ] && return
+
+	python-coverage erase
+}
+
+python_coverage_finish()
+{
+	[ $enable_python_coverage = 0 ] && return
+
+	python-coverage report
+	python-coverage html
+}
+
+do_single()
+{
+	python_coverage_start
+	do_test "$1"
+	python_coverage_finish
+}
+
 do_test_suite()
 {
+	python_coverage_start
+
 	for i in $tests_list; do
 		do_test "$i"
 		ret=$?
@@ -269,6 +304,8 @@ do_test_suite()
 	if [ "$disabled_tests" -ne "0" ]; then
 		echo "$disabled_tests tests were disabled"
 	fi
+
+	python_coverage_finish
 
 	if [ "$ko_tests" -ne "0" ]; then
 		return 1
@@ -391,6 +428,13 @@ arg_file()
 	return 0
 }
 
+python-coverage --version >/dev/null 2>/dev/null
+has_python_coverage=$?
+
+if [ $want_python_coverage = 1 -a $has_python_coverage = 0 ]; then
+	enable_python_coverage=1
+fi
+
 ret=0
 case "$1" in
 	'')
@@ -399,7 +443,7 @@ case "$1" in
 		;;
 	single)
 		arg_file "$2"
-		do_test "$2"
+		do_single "$2"
 		case "$?" in
 			0) echo "$2 passed!";;
 			1) echo "$2 failed!"; ret=1;;
