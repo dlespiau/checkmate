@@ -1,20 +1,20 @@
 == Checkmate
 
-- README.adoc
-- Count make errors as build errors:
-  make: *** [modules] Error 2
 - Make the 'build' artefact a bit more meta: a class able to build everything
   (kernel, autotools projects, ...) instead of having two build classes at the
   same level (and select between them in the config file)
-- We should invalidate the DB if .mateconfig changes (keep a checksum of the
-  file in .mate)
-- show command showing artefacts
+- README.adoc
+- Count make errors as build errors:
+  make: *** [modules] Error 2
 - kdoc warnings
 - kdoc warnings for drm and i915 only
 - gtkdoc warnings (i-g-t)
 - distcheck (i-g-t)
 - cppcheck -f -q --template=gcc --enable=all --language=c
 - MODE=report/patch? scripts/coccicheck
+- We should invalidate the DB if .mateconfig changes (keep a checksum of the
+  file in .mate)
+- show command showing artefacts
 
 == Maybe one day
 
@@ -23,10 +23,10 @@
 
 == Tests
 
-- give a non-existent directory to -C
 - test that generates errors (linux-build)
 - test that generates warnings (linux-build)
-- A more friendly error message for config errors (say if the artefact name is
   unknown or invalid syntax)
+- A more friendly error message for config errors (say if the artefact name is
 - Using a tag as refspec doesn't give a hash (and wong log messaged as well a
+- give a non-existent directory to -C
   corrupted DB)
