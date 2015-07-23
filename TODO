@@ -1,8 +1,6 @@
 == Checkmate
 
-- Make the 'build' artefact a bit more meta: a class able to build everything
-  (kernel, autotools projects, ...) instead of having two build classes at the
-  same level (and select between them in the config file)
+- autotool build artefact
 - README.adoc
 - Count make errors as build errors:
   make: *** [modules] Error 2

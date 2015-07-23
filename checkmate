@@ -374,8 +374,8 @@ class Artefact:
         else:
                 self.do_collect()
 
-class BuildArtefact(Artefact):
-    name = 'build'
+class MakefileBuildArtefact(Artefact):
+    name = 'build-makefile'
 
     def do_ensure_collect(self):
         if not os.path.isfile('Makefile'):
@@ -387,7 +387,7 @@ class BuildArtefact(Artefact):
         self._artefact('make  -j%d' % (self.n_cpus + 1))
 
 class KernelBuildArtefact(Artefact):
-    name = 'linux-build'
+    name = 'build-linux'
 
     def do_ensure_collect(self):
         if not self.project.is_linux_kernel():
@@ -410,6 +410,22 @@ class KernelBuildArtefact(Artefact):
             if not self._can_skip():
                 self._do('make clean')
             self._artefact('make  -j%d' % (self.n_cpus + 1))
+
+class BuildArtefact(Artefact):
+    name = 'build'
+
+    def __init__(self, project, args=None):
+        Artefact.__init__(self, project, args)
+        if project.is_linux_kernel:
+            self._delegate = KernelBuildArtefact
+        else:
+            self._delegate = MakefileBuildArtefact
+
+    def do_ensure_collect(self):
+        self._delegate.do_ensure_collect(self)
+
+    def do_collect(self, files=None):
+        self._delegate.do_collect(self, files)
 
 class KernelSparseArtefact(Artefact):
     name = 'linux-sparse'
