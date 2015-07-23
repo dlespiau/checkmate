@@ -10,6 +10,10 @@
 - distcheck (i-g-t)
 - cppcheck -f -q --template=gcc --enable=all --language=c
 - MODE=report/patch? scripts/coccicheck
+- Do a do_ensure_collect pass on the configured artefacts to make sure we can
+  produce what's being asked (ie check sparse is installed if we're asked to
+  generate sparse-warnings)
+- do_ensure_collect() should probably be renamed then can_run?
 - We should invalidate the DB if .mateconfig changes (keep a checksum of the
   file in .mate)
 - show command showing artefacts
@@ -28,3 +32,4 @@
 - Using a tag as refspec doesn't give a hash (and wong log messaged as well a
 - give a non-existent directory to -C
   corrupted DB)
+- test verbose option works
