@@ -2,6 +2,12 @@
  * check-name: Test we can use tag..
  * check-command: checkmate -C checkmate-test-linux analyse v4.0..
  *
+ * check-pre-script-start
+../checkmate -C checkmate-test-linux clean
+(cd checkmate-test-linux && git checkout test-checkpatch && \
+ git reset --hard origin/test-checkpatch)
+ * check-pre-script-end
+ *
  * check-output-start
 [32minfo:[0m Checking commit '.mateconfig'
 [32minfo:[0m e71705d: == Collecting artefact 'linux-checkpatch' for metric 'checkpatch-errors'
