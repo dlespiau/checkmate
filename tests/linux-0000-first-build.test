@@ -7,7 +7,8 @@
 if [ x"$NO_GIT_CLEAN" != x1 ]; then
 	(cd checkmate-test-linux && git clean -xdf)
 fi
-(cd checkmate-test-linux && git checkout test-first-build)
+(cd checkmate-test-linux && git checkout test-first-build && \
+ git reset --hard origin/test-first-build)
  * check-pre-script-end
  *
  * check-output-start
