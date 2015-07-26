@@ -1,9 +1,12 @@
 == Checkmate
 
-- autotool build artefact
 - README.adoc
+- autotool build artefact
+- -l make flag
 - Count make errors as build errors:
   make: *** [modules] Error 2
+- options to specify another config file (for when it's impractical to have the
+  config file in the git repo itself)
 - kdoc warnings
 - kdoc warnings for drm and i915 only
 - gtkdoc warnings (i-g-t)
