@@ -1,0 +1,71 @@
+= checkmate
+
+Every time I have to review a patch, the same questions arise: is that patch
+correctly formatted? Does it even compile without warning? Have static analysis
+tools been run? ... It's not always possible to hack the project build system
+or tests to incorporate those checks and `checkmate` is my little script to run
+them for me. Even better, `checkmate` can be used with automation systems (like
+Jenkins) to run tests on branches or patch submissions.
+
+== Usage
+
+`checkmate` needs a configuration file, usually put in the root directory of
+the project, with the list of wanted metrics:
+
+....
+$ cat .mateconfig
+config = {
+    # Restrict all linux-* artefacts to that path
+    'linux-path': 'drivers/gpu/drm',
+
+    # One can also specify additional arguments to give to checkpatch.pl
+    'checkpatch-extra-args': '--ignore SPLIT_STRING,COMPLEX_MACRO',
+}
+
+metrics = [
+    { 'name': 'checkpatch-errors', },
+    { 'name': 'checkpatch-warnings', },
+]
+....
+
+This config file example show a few things:
+
+- We're asking for `checkpatch.pl` related metrics: errors and warnings.
+  `checkpatch.pl` is the script everyone should run before submitting a patch to
+  the Linux kernel,
+- There are a few additional options one can specify, here we're restricting
+  the check to a subdirectory interesting to us,
+- This file is python code that will be evaluated, so fancy things can be done.
+
+Then it's just a matter of invoking `checkmate`:
+
+....
+$ checkmate analyse
+info: Checking commit 'A commit that should make checkpatch unhappy'
+info: 3bfad8e: == Collecting artefact 'linux-checkpatch' for metric 'checkpatch-errors'
+info: 3bfad8e: == Collecting artefact 'linux-checkpatch' for metric 'checkpatch-warnings'
+info: 3bfad8e: == Metrics
+info: 3bfad8e: checkpatch-errors: 2 errors
+info: 3bfad8e: checkpatch-warnings: 1 warnings
+....
+
+By default, `checkmate` will only work with the last commit. It's possible to
+speficy a range of commits as well
+
+....
+$ checkmate analyse HEAD~2..
+....
+
+== Artefacts & Metrics
+
+- checkpatch.pl
+- sparse
+- smatch
+
+== Options
+
+FIXME
+
+== Limitations
+
+This tool only works with git repositories.
