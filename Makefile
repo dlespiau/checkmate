@@ -15,3 +15,4 @@ clean-check:
 	               -o -name "*.test.pre.sh" \
 	               -o -name "*.test.post.sh" \
 	            \) -exec rm {} \;
+	@rm -rf tests/.coverage tests/htmlcov
