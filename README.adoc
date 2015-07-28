@@ -50,7 +50,7 @@ info: 3bfad8e: checkpatch-warnings: 1 warnings
 ....
 
 By default, `checkmate` will only work with the last commit. It's possible to
-speficy a range of commits as well
+speficy a range of commits as well:
 
 ....
 $ checkmate analyse HEAD~2..
