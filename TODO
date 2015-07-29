@@ -1,6 +1,5 @@
 == Checkmate
 
-- README.adoc
 - autotool build artefact
 - -l make flag
 - Count make errors as build errors:
@@ -20,6 +19,16 @@
 - We should invalidate the DB if .mateconfig changes (keep a checksum of the
   file in .mate)
 - show command showing artefacts
+- README: explains what artefact and metrics are
+- README: add the list of metrics and options
+- README: add the list of command line options?
+- Expose metrics in a easily parsable format (JSON?) so tools can pick them
+  up
+- Right now, the sparse metrics are project wide while the default should
+  really be per-commit, with the project wide one still as an option.
+- Rename compilation-errors to -error?
+- some metrics are booleans (compilation-error), should they be treated
+  differently
 
 == Maybe one day
 
