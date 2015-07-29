@@ -415,7 +415,7 @@ class BuildArtefact(Artefact):
     name = 'build'
 
     def __init__(self, project, args=None):
-        if project.is_linux_kernel:
+        if project.is_linux_kernel():
             self._delegate = KernelBuildArtefact(project, args)
         else:
             self._delegate = MakefileBuildArtefact(project, args)
