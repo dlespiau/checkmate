@@ -415,17 +415,16 @@ class BuildArtefact(Artefact):
     name = 'build'
 
     def __init__(self, project, args=None):
-        Artefact.__init__(self, project, args)
         if project.is_linux_kernel:
-            self._delegate = KernelBuildArtefact
+            self._delegate = KernelBuildArtefact(project, args)
         else:
-            self._delegate = MakefileBuildArtefact
+            self._delegate = MakefileBuildArtefact(project, args)
 
     def do_ensure_collect(self):
-        self._delegate.do_ensure_collect(self)
+        self._delegate.do_ensure_collect()
 
     def do_collect(self, files=None):
-        self._delegate.do_collect(self, files)
+        self._delegate.do_collect(files)
 
 class KernelSparseArtefact(Artefact):
     name = 'linux-sparse'
