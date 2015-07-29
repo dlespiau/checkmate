@@ -516,7 +516,6 @@ class MemcheckArtefact(Artefact):
 
 known_artefacts = (
         BuildArtefact,
-        KernelBuildArtefact,
         KernelSparseArtefact,
         KernelSmatchArtefact,
         KernelCheckpatchArtefact,
